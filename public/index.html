@@ -71,8 +71,6 @@
                         <button onclick="saveCreation()">Save Monster</button>
                         <button onclick="exportCanvas()">Export</button>
                         <button onclick="clearWorkspace()">Clear</button>
-                        <button onclick="wipeDatabase()" style="background-color: #dc3545; margin-left: 20px;">Wipe DB</button>
-                        <button onclick="seedDatabase()" style="background-color: #28a745;">Seed DB</button>
                     </div>
                     
                     <div class="part-controls">
@@ -131,6 +129,7 @@
     <!-- Monster Selection Modal -->
     <div id="monster-modal" class="modal">
         <div class="modal-content">
+            <span class="modal-close" onclick="closeModalToGallery()">&times;</span>
             <h2>Select Your Monsters</h2>
             <p>Choose 2 different monsters to create your hybrid creature:</p>
             
@@ -154,10 +153,6 @@
             
             <div class="modal-buttons">
                 <button onclick="confirmMonsterSelection()" id="confirm-btn" disabled>Start Creating</button>
-                <div class="modal-db-buttons">
-                    <button onclick="wipeDatabase()" style="background-color: #dc3545;">Delete DB</button>
-                    <button onclick="seedDatabase()" style="background-color: #28a745;">Seed DB</button>
-                </div>
             </div>
         </div>
     </div>

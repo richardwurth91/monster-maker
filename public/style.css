@@ -437,6 +437,7 @@ h1 {
     text-align: center;
     color: #333;
     image-rendering: pixelated;
+    position: relative;
 }
 
 .modal-monsters {
@@ -491,6 +492,21 @@ h1 {
 .modal-buttons button:disabled {
     background: #ccc;
     cursor: not-allowed;
+}
+
+.modal-close {
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 35px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #000;
 }
 
 .modal-db-buttons {

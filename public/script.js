@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     ctx = workspace.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     
+    await seedDatabase(); // Auto-seed database on load
     await loadMonsters();
     setupWorkspace();
     loadGallery();
@@ -856,6 +857,12 @@ function updateSelectedMonstersDisplay() {
     });
 }
 
+// Close modal and go to gallery
+function closeModalToGallery() {
+    document.getElementById('monster-modal').style.display = 'none';
+    showTab('gallery');
+}
+
 // Tab functionality
 function showTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(tab => {
@@ -870,6 +877,8 @@ function showTab(tabName) {
     
     if (tabName === 'gallery') {
         loadGallery();
+    } else if (tabName === 'creator') {
+        openMonsterModal();
     }
 }
 
