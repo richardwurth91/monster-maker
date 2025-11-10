@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster Maker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Monster Maker</h1>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('creator')">Create Monster</button>
+            <button class="tab-btn" onclick="showTab('gallery')">Gallery</button>
+        </div>
+
+        <div id="creator" class="tab-content active">
+            <div class="monster-selector" style="display: none;">
+                <div class="monster-select">
+                    <h3>Select Monster 1</h3>
+                    <select id="monster1" onchange="loadMonster(1)">
+                        <option value="">Choose a monster...</option>
+                    </select>
+                    <div id="monster1-preview" class="monster-preview"></div>
+                </div>
+                
+                <div class="monster-select">
+                    <h3>Select Monster 2</h3>
+                    <select id="monster2" onchange="loadMonster(2)">
+                        <option value="">Choose a monster...</option>
+                    </select>
+                    <div id="monster2-preview" class="monster-preview"></div>
+                </div>
+            </div>
+            
+            <div class="selected-monsters">
+                <div class="selected-monster">
+                    <h4>Monster 1</h4>
+                    <div id="selected-monster1" class="selected-preview">Not selected</div>
+                    <div id="selected-name1" class="selected-monster-name"></div>
+                </div>
+                <div class="selected-monster">
+                    <h4>Monster 2</h4>
+                    <div id="selected-monster2" class="selected-preview">Not selected</div>
+                    <div id="selected-name2" class="selected-monster-name"></div>
+                </div>
+                <button onclick="openMonsterModal()" class="change-monsters-btn">Change Monsters</button>
+            </div>
+
+            <div class="workspace">
+                <div class="parts-panel">
+                    <h3>Monster Parts</h3>
+                    <div class="parts-columns">
+                        <div class="parts-column">
+                            <h4 id="monster1-parts-title">Monster 1</h4>
+                            <div id="monster1-parts"></div>
+                        </div>
+                        <div class="parts-column">
+                            <h4 id="monster2-parts-title">Monster 2</h4>
+                            <div id="monster2-parts"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="canvas-area">
+                    <h3>Workspace (64x64)</h3>
+                    <canvas id="workspace" width="640" height="640"></canvas>
+                    <div class="controls">
+                        <input type="text" id="monster-name" placeholder="Monster name...">
+                        <button onclick="saveCreation()">Save Monster</button>
+                        <button onclick="exportCanvas()">Export</button>
+                        <button onclick="clearWorkspace()">Clear</button>
+                        <button onclick="wipeDatabase()" style="background-color: #dc3545; margin-left: 20px;">Wipe DB</button>
+                        <button onclick="seedDatabase()" style="background-color: #28a745;">Seed DB</button>
+                    </div>
+                    
+                    <div class="part-controls">
+                        <div class="control-group">
+                            <h4>Rotate</h4>
+                            <button onclick="rotateSelectedPart(-15)">← Left</button>
+                            <button onclick="rotateSelectedPart(15)">→ Right</button>
+                        </div>
+                        <div class="control-group">
+                            <h4>Flip</h4>
+                            <button onclick="flipSelectedPart('horizontal')">↔ Horizontal</button>
+                            <button onclick="flipSelectedPart('vertical')">↕ Vertical</button>
+                        </div>
+                        <div class="control-group">
+                            <h4>Resize</h4>
+                            <button onclick="adjustScale(-0.25)">-</button>
+                            <button onclick="resetScale()">Reset</button>
+                            <button onclick="adjustScale(0.25)">+</button>
+                        </div>
+                        <div class="control-group">
+                            <h4>Layers</h4>
+                            <button onclick="moveLayerUp()">Move Up</button>
+                            <button onclick="moveLayerDown()">Move Down</button>
+                            <button onclick="bringToFront()">Bring Forward</button>
+                            <button onclick="sendToBack()">Send Back</button>
+                        </div>
+                        <div class="control-group">
+                            <h4>Remove</h4>
+                            <button onclick="removeSelectedPart()" style="background-color: #dc3545;">Delete Part</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="layers-panel">
+                    <h3>Layers</h3>
+                    <div id="layers-list"></div>
+                    <div class="layer-controls">
+                        <button onclick="moveLayerUp()">↑ Up</button>
+                        <button onclick="moveLayerDown()">↓ Down</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="gallery" class="tab-content">
+            <h2>Monster Gallery</h2>
+            <div class="gallery-filter">
+                <input type="text" id="gallery-filter" placeholder="Filter by monster name..." oninput="filterGallery()">
+            </div>
+            <div id="gallery-grid"></div>
+        </div>
+        
+
+    </div>
+    
+    <!-- Monster Selection Modal -->
+    <div id="monster-modal" class="modal">
+        <div class="modal-content">
+            <h2>Select Your Monsters</h2>
+            <p>Choose 2 different monsters to create your hybrid creature:</p>
+            
+            <div class="modal-monsters">
+                <div class="modal-monster-select">
+                    <h3>Monster 1</h3>
+                    <select id="modal-monster1" onchange="updateModalPreview(1)">
+                        <option value="">Choose a monster...</option>
+                    </select>
+                    <div id="modal-preview1" class="modal-preview"></div>
+                </div>
+                
+                <div class="modal-monster-select">
+                    <h3>Monster 2</h3>
+                    <select id="modal-monster2" onchange="updateModalPreview(2)">
+                        <option value="">Choose a monster...</option>
+                    </select>
+                    <div id="modal-preview2" class="modal-preview"></div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button onclick="confirmMonsterSelection()" id="confirm-btn" disabled>Start Creating</button>
+                <div class="modal-db-buttons">
+                    <button onclick="wipeDatabase()" style="background-color: #dc3545;">Delete DB</button>
+                    <button onclick="seedDatabase()" style="background-color: #28a745;">Seed DB</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
