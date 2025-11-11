@@ -65,11 +65,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     ctx = workspace.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     
+    // Scale canvas for mobile devices
+    setupMobileCanvas();
+    
     await seedDatabase(); // Auto-seed database on load
     await loadMonsters();
     setupWorkspace();
     loadGallery();
     openMonsterModal(); // Show modal on page load
+});
+
+// Setup mobile-friendly canvas scaling
+function setupMobileCanvas() {
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // Scale down canvas for mobile while maintaining pixel art quality
+        const scale = 0.5;
+        workspace.style.width = (640 * scale) + 'px';
+        workspace.style.height = (640 * scale) + 'px';
+        workspace.style.imageRendering = 'pixelated';
+        workspace.style.imageRendering = '-moz-crisp-edges';
+        workspace.style.imageRendering = 'crisp-edges';
+    }
+}
+
+// Handle window resize for responsive canvas
+window.addEventListener('resize', () => {
+    setupMobileCanvas();
 });
 
 // Load monsters from database
@@ -230,12 +253,17 @@ function updateAvailableParts() {
                         }));
                     });
                     
-                    partDiv.addEventListener('click', (e) => {
+                    // Handle both click and touch for adding parts
+                    const addPartHandler = (e) => {
+                        e.preventDefault();
                         // Add part to center of canvas
                         const centerX = Math.floor((320 - 16) / 10) * 10;
                         const centerY = Math.floor((320 - 16) / 10) * 10;
                         addPartToWorkspace(croppedData, partName, centerX, centerY, monster.name);
-                    });
+                    };
+                    
+                    partDiv.addEventListener('click', addPartHandler);
+                    partDiv.addEventListener('touchend', addPartHandler);
                 }
                 
                 container.appendChild(partDiv);
@@ -272,6 +300,11 @@ function setupWorkspace() {
     workspace.addEventListener('mousedown', handleMouseDown);
     workspace.addEventListener('mousemove', handleMouseMove);
     workspace.addEventListener('mouseup', handleMouseUp);
+    
+    // Touch events for mobile
+    workspace.addEventListener('touchstart', handleTouchStart, { passive: false });
+    workspace.addEventListener('touchmove', handleTouchMove, { passive: false });
+    workspace.addEventListener('touchend', handleTouchEnd, { passive: false });
     
     // Keyboard events for arrow key movement
     document.addEventListener('keydown', handleKeyDown);
@@ -387,13 +420,38 @@ function handleMouseDown(e) {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
+    handlePointerDown(mouseX, mouseY);
+}
+
+// Touch event handlers
+function handleTouchStart(e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+        const rect = workspace.getBoundingClientRect();
+        const touch = e.touches[0];
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
+        
+        handlePointerDown(touchX, touchY);
+    }
+}
+
+// Common pointer down handler
+function handlePointerDown(x, y) {
+    // Adjust coordinates for mobile scaling
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        x *= 2; // Scale up coordinates to match canvas size
+        y *= 2;
+    }
+    
     let partFound = false;
     
-    // Find clicked part (check from top to bottom)
+    // Find clicked/touched part (check from top to bottom)
     for (let i = placedParts.length - 1; i >= 0; i--) {
         const part = placedParts[i];
-        if (mouseX >= part.x && mouseX <= part.x + part.width &&
-            mouseY >= part.y && mouseY <= part.y + part.height) {
+        if (x >= part.x && x <= part.x + part.width &&
+            y >= part.y && y <= part.y + part.height) {
             selectedPart = part;
             selectedLayerIndex = i;
             isDragging = true;
@@ -404,7 +462,7 @@ function handleMouseDown(e) {
         }
     }
     
-    // If no part was clicked, deselect
+    // If no part was clicked/touched, deselect
     if (!partFound) {
         selectedPart = null;
         selectedLayerIndex = -1;
@@ -420,9 +478,33 @@ function handleMouseMove(e) {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
-    // Center piece on cursor and snap to grid
-    const newX = Math.floor((mouseX - selectedPart.width / 2) / 10) * 10;
-    const newY = Math.floor((mouseY - selectedPart.height / 2) / 10) * 10;
+    handlePointerMove(mouseX, mouseY);
+}
+
+function handleTouchMove(e) {
+    e.preventDefault();
+    if (!isDragging || !selectedPart || e.touches.length !== 1) return;
+    
+    const rect = workspace.getBoundingClientRect();
+    const touch = e.touches[0];
+    const touchX = touch.clientX - rect.left;
+    const touchY = touch.clientY - rect.top;
+    
+    handlePointerMove(touchX, touchY);
+}
+
+// Common pointer move handler
+function handlePointerMove(x, y) {
+    // Adjust coordinates for mobile scaling
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        x *= 2; // Scale up coordinates to match canvas size
+        y *= 2;
+    }
+    
+    // Center piece on pointer and snap to grid
+    const newX = Math.floor((x - selectedPart.width / 2) / 10) * 10;
+    const newY = Math.floor((y - selectedPart.height / 2) / 10) * 10;
     
     // Only redraw if position actually changed
     if (newX !== selectedPart.x || newY !== selectedPart.y) {
@@ -438,6 +520,16 @@ function handleMouseMove(e) {
 }
 
 function handleMouseUp(e) {
+    handlePointerUp();
+}
+
+function handleTouchEnd(e) {
+    e.preventDefault();
+    handlePointerUp();
+}
+
+// Common pointer up handler
+function handlePointerUp() {
     isDragging = false;
     if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -603,7 +695,6 @@ async function seedDatabase() {
     try {
         const response = await fetch('/api/seed', { method: 'POST' });
         if (response.ok) {
-            alert('Database seeded successfully!');
             await loadMonsters(); // Refresh monster lists
         }
     } catch (error) {
