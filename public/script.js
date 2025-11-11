@@ -259,17 +259,37 @@ function updateAvailableParts() {
                         }));
                     });
                     
-                    // Handle both click and touch for adding parts
+                    // Handle click for adding parts
                     const addPartHandler = (e) => {
-                        e.preventDefault();
                         // Add part to center of canvas
                         const centerX = Math.floor((320 - 16) / 10) * 10;
                         const centerY = Math.floor((320 - 16) / 10) * 10;
                         addPartToWorkspace(croppedData, partName, centerX, centerY, monster.name);
                     };
                     
+                    // Track touch for mobile scroll detection
+                    let touchStartY = 0;
+                    let touchMoved = false;
+                    
+                    partDiv.addEventListener('touchstart', (e) => {
+                        touchStartY = e.touches[0].clientY;
+                        touchMoved = false;
+                    });
+                    
+                    partDiv.addEventListener('touchmove', (e) => {
+                        const touchY = e.touches[0].clientY;
+                        if (Math.abs(touchY - touchStartY) > 10) {
+                            touchMoved = true;
+                        }
+                    });
+                    
+                    partDiv.addEventListener('touchend', (e) => {
+                        if (!touchMoved) {
+                            addPartHandler(e);
+                        }
+                    });
+                    
                     partDiv.addEventListener('click', addPartHandler);
-                    partDiv.addEventListener('touchend', addPartHandler);
                 }
                 
                 partsList.appendChild(partDiv);
