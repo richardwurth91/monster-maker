@@ -68,6 +68,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Scale canvas for mobile devices
     setupMobileCanvas();
     
+    // Initialize mobile features
+    initializeMobileFeatures();
+    
     await seedDatabase(); // Auto-seed database on load
     await loadMonsters();
     setupWorkspace();
@@ -201,7 +204,7 @@ function updateAvailableParts() {
         return;
     }
     
-    // Update column titles with monster names
+    // Update titles with monster names
     monster1Title.textContent = selectedMonsters[1] ? selectedMonsters[1].name : 'Monster 1';
     monster2Title.textContent = selectedMonsters[2] ? selectedMonsters[2].name : 'Monster 2';
     
@@ -211,6 +214,9 @@ function updateAvailableParts() {
         
         if (monster && monster.parts) {
             const parts = JSON.parse(monster.parts);
+            const partsList = document.createElement('div');
+            partsList.className = 'parts-list';
+            
             Object.entries(parts).forEach(async ([partName, partData]) => {
                 const croppedData = await autoCropImage(partData);
                 
@@ -266,8 +272,10 @@ function updateAvailableParts() {
                     partDiv.addEventListener('touchend', addPartHandler);
                 }
                 
-                container.appendChild(partDiv);
+                partsList.appendChild(partDiv);
             });
+            
+            container.appendChild(partsList);
         }
     });
 }
@@ -603,6 +611,7 @@ async function saveCreation() {
         if (response.ok) {
             alert('Monster saved successfully!');
             document.getElementById('monster-name').value = '';
+            closeSaveModal();
             clearWorkspace();
             loadGallery();
         }
@@ -839,6 +848,15 @@ function removeSelectedPart() {
     }
 }
 
+// Save modal functions
+function openSaveModal() {
+    document.getElementById('save-modal').style.display = 'block';
+}
+
+function closeSaveModal() {
+    document.getElementById('save-modal').style.display = 'none';
+}
+
 // Modal functions
 function openMonsterModal() {
     // Check if there are parts on the canvas
@@ -1043,3 +1061,71 @@ function exportCanvas() {
     link.href = exportCanvas.toDataURL();
     link.click();
 }
+
+// Mobile-specific functions
+function toggleMobileSection(sectionName) {
+    const content = document.getElementById(`${sectionName}-content`);
+    const header = event.target;
+    
+    if (content.classList.contains('collapsed')) {
+        content.classList.remove('collapsed');
+        header.classList.remove('collapsed');
+        content.style.maxHeight = content.scrollHeight + 'px';
+    } else {
+        content.classList.add('collapsed');
+        header.classList.add('collapsed');
+        content.style.maxHeight = '0px';
+    }
+}
+
+function toggleMobileControls() {
+    const panel = document.getElementById('mobile-controls-panel');
+    panel.classList.toggle('open');
+}
+
+// Initialize mobile features
+function initializeMobileFeatures() {
+    const isMobile = window.innerWidth <= 768;
+    
+    console.log('Mobile detection:', isMobile, 'Window width:', window.innerWidth);
+    
+    // Debug: Log all elements with control buttons
+    const allButtons = document.querySelectorAll('button');
+    console.log('All buttons found:', allButtons.length);
+    allButtons.forEach((btn, index) => {
+        if (btn.textContent.includes('Left') || btn.textContent.includes('Right') || btn.textContent.includes('Horizontal')) {
+            console.log(`Button ${index}:`, btn.textContent, 'Parent:', btn.parentElement.className, 'Grandparent:', btn.parentElement.parentElement?.className);
+        }
+    });
+    
+    if (isMobile) {
+        // Show mobile controls toggle
+        const toggle = document.querySelector('.mobile-controls-toggle');
+        if (toggle) {
+            toggle.style.display = 'block';
+        }
+        
+        // Hide desktop h3 headers on mobile
+        const desktopHeaders = document.querySelectorAll('.parts-panel h3, .layers-panel h3');
+        desktopHeaders.forEach(header => {
+            header.style.display = 'none';
+        });
+        
+        // Set initial collapsed state for mobile sections
+        const sections = ['layers'];
+        sections.forEach(section => {
+            const content = document.getElementById(`${section}-content`);
+            if (content) {
+                content.style.maxHeight = content.scrollHeight + 'px';
+            }
+        });
+    }
+}
+
+
+
+// Update window resize handler
+window.addEventListener('resize', () => {
+    setupMobileCanvas();
+    initializeMobileFeatures();
+});

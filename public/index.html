@@ -49,31 +49,48 @@
             </div>
 
             <div class="workspace">
-                <div class="parts-panel">
-                    <h3>Monster Parts</h3>
-                    <div class="parts-columns">
-                        <div class="parts-column">
-                            <h4 id="monster1-parts-title">Monster 1</h4>
-                            <div id="monster1-parts"></div>
+                <div class="canvas-area">
+                    <div class="parts-panel top-parts">
+                        <h3>Monster 1 Parts</h3>
+                        <h4 id="monster1-parts-title">Monster 1</h4>
+                        <div id="monster1-parts"></div>
+                    </div>
+                    
+                    <div class="canvas-center">
+                        <h3>Workspace (64x64)</h3>
+                        <canvas id="workspace" width="640" height="640"></canvas>
+                    </div>
+                    
+                    <div class="mobile-part-controls">
+                        <div class="mobile-control-group">
+                            <button onclick="rotateSelectedPart(-15)">↺</button>
+                            <button onclick="rotateSelectedPart(15)">↻</button>
                         </div>
-                        <div class="parts-column">
-                            <h4 id="monster2-parts-title">Monster 2</h4>
-                            <div id="monster2-parts"></div>
+                        <div class="mobile-control-group">
+                            <button onclick="flipSelectedPart('horizontal')">↔</button>
+                            <button onclick="flipSelectedPart('vertical')">↕</button>
+                        </div>
+                        <div class="mobile-control-group">
+                            <button onclick="adjustScale(-0.25)">-</button>
+                            <button onclick="adjustScale(0.25)">+</button>
+                        </div>
+                        <div class="mobile-control-group">
+                            <button onclick="removeSelectedPart()" style="background-color: #dc3545;">✕</button>
                         </div>
                     </div>
-                </div>
-                
-                <div class="canvas-area">
-                    <h3>Workspace (64x64)</h3>
-                    <canvas id="workspace" width="640" height="640"></canvas>
+                    
+                    <div class="parts-panel bottom-parts">
+                        <h3>Monster 2 Parts</h3>
+                        <h4 id="monster2-parts-title">Monster 2</h4>
+                        <div id="monster2-parts"></div>
+                    </div>
+                    
                     <div class="controls">
-                        <input type="text" id="monster-name" placeholder="Monster name...">
-                        <button onclick="saveCreation()">Save Monster</button>
-                        <button onclick="exportCanvas()">Export</button>
+                        <button onclick="openSaveModal()">Save</button>
                         <button onclick="clearWorkspace()">Clear</button>
                     </div>
                     
-                    <div class="part-controls">
+                    <div class="part-controls" id="part-controls">
                         <div class="control-group">
                             <h4>Rotate</h4>
                             <button onclick="rotateSelectedPart(-15)">← Left</button>
@@ -103,8 +120,13 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="layers-panel">
+            </div>
+            
+            <div class="layers-panel">
+                <button class="mobile-section-header" onclick="toggleMobileSection('layers')">
+                    Layers
+                </button>
+                <div id="layers-content" class="mobile-collapsible">
                     <h3>Layers</h3>
                     <div id="layers-list"></div>
                     <div class="layer-controls">
@@ -124,6 +146,20 @@
         </div>
         
 
+    </div>
+    
+    
+    <!-- Save Modal -->
+    <div id="save-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeSaveModal()">&times;</span>
+            <h2>Save Monster</h2>
+            <input type="text" id="monster-name" placeholder="Monster name..." style="width: 100%; padding: 10px; margin: 20px 0; font-size: 16px;">
+            <div class="modal-buttons">
+                <button onclick="saveCreation()">Save Monster</button>
+                <button onclick="exportCanvas()">Export</button>
+            </div>
+        </div>
     </div>
     
     <!-- Monster Selection Modal -->

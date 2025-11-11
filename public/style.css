@@ -47,7 +47,7 @@ body {
 
 @media (max-width: 768px) {
     .container {
-        padding: 10px;
+        padding: 5px;
         margin: 0;
         border-radius: 0;
     }
@@ -159,43 +159,86 @@ h1 {
 @media (max-width: 768px) {
     .workspace {
         flex-direction: column;
-        gap: 15px;
+        gap: 10px;
     }
 }
 
 .parts-panel {
-    width: 200px;
     background: white;
     border: 20px solid transparent;
     border-image: url('frame.svg') 20 fill;
-    padding: 20px;
+    padding: 15px;
     color: #333;
     image-rendering: pixelated;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.top-parts, .bottom-parts {
+    width: 100%;
+}
+
+.top-parts .parts-list, .bottom-parts .parts-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+}
+
+.canvas-center {
+    text-align: center;
+    margin: 20px 0;
 }
 
 @media (max-width: 768px) {
     .parts-panel {
-        width: 100%;
-        order: 2;
-        padding: 15px;
+        padding: 10px;
+        max-height: 120px;
+    }
+    
+    .canvas-center {
+        margin: 10px 0;
+    }
+    
+    .mobile-part-controls {
+        display: flex !important;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px;
+        background: rgba(255,255,255,0.9);
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    
+    .mobile-control-group {
+        display: flex;
+        gap: 4px;
+    }
+    
+    .mobile-control-group button {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        font-size: 14px;
+        border: 2px solid #8b4513;
+        background: linear-gradient(to bottom, #d2b48c, #a0522d);
+        color: black;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        touch-action: manipulation;
     }
 }
 
-.parts-columns {
-    display: flex;
-    gap: 15px;
-}
-
-@media (max-width: 768px) {
-    .parts-columns {
-        flex-direction: row;
-        justify-content: space-around;
+@media (min-width: 769px) {
+    .mobile-part-controls {
+        display: none !important;
     }
 }
 
-.parts-column {
-    flex: 1;
-}
+
+
+
 
 .parts-column h4 {
     margin: 0 0 10px 0;
@@ -212,9 +255,11 @@ h1 {
 
 .parts-list {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .part-item {
@@ -229,13 +274,7 @@ h1 {
     touch-action: manipulation;
 }
 
-@media (max-width: 768px) {
-    .part-item {
-        width: 48px;
-        height: 48px;
-        margin: 2px;
-    }
-}
+
 
 .part-item:active {
     cursor: grabbing;
@@ -262,8 +301,7 @@ h1 {
 
 @media (max-width: 768px) {
     .canvas-area {
-        order: 1;
-        padding: 15px;
+        padding: 10px;
     }
 }
 
@@ -421,9 +459,7 @@ h1 {
 
 @media (max-width: 768px) {
     .layers-panel {
-        width: 100%;
-        order: 3;
-        padding: 15px;
+        display: none;
     }
 }
 
@@ -484,9 +520,7 @@ h1 {
 
 @media (max-width: 768px) {
     .part-controls {
-        gap: 15px;
-        padding: 10px;
-        justify-content: center;
+        display: none;
     }
 }
 
@@ -556,8 +590,11 @@ h1 {
 
 @media (max-width: 768px) {
     .selected-monsters {
-        gap: 15px;
-        margin-bottom: 20px;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: rgba(255,255,255,0.9);
+        border-radius: 8px;
     }
 }
 
@@ -748,4 +785,54 @@ h1 {
 .modal-db-buttons button {
     padding: 8px 16px;
     font-size: 14px;
+}
+
+/* Mobile collapsible sections */
+.mobile-section-header {
+    display: none;
+    background: #007bff;
+    color: white;
+    padding: 12px;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    touch-action: manipulation;
+}
+
+@media (max-width: 768px) {
+    .mobile-section-header {
+        display: block;
+    }
+    
+    .mobile-section-header:after {
+        content: '▼';
+        float: right;
+        transition: transform 0.3s;
+    }
+    
+    .mobile-section-header.collapsed:after {
+        transform: rotate(-90deg);
+    }
+    
+    .mobile-collapsible {
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+    
+    .mobile-collapsible.collapsed {
+        max-height: 0 !important;
+    }
+}
+
+/* Mobile sticky controls */
+@media (max-width: 768px) {
+    .mobile-controls-toggle {
+        display: none !important;
+    }
+    
 }
