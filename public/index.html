@@ -45,7 +45,7 @@
                     <div id="selected-monster2" class="selected-preview">Not selected</div>
                     <div id="selected-name2" class="selected-monster-name"></div>
                 </div>
-                <button onclick="openMonsterModal()" class="change-monsters-btn">Change Monsters</button>
+                <button onclick="openMonsterModal()" class="change-monsters-btn" id="change-monsters-btn">Select Monsters</button>
             </div>
 
             <div class="workspace">
@@ -90,7 +90,7 @@
                     </div>
                     
                     <div class="controls">
-                        <button onclick="openSaveModal()">Save</button>
+                        <button onclick="openSaveModal()" id="save-btn" disabled>Save</button>
                         <button onclick="clearWorkspace()">Clear</button>
                     </div>
                     
@@ -144,7 +144,25 @@
         <div id="gallery" class="tab-content">
             <h2>Monster Gallery</h2>
             <div class="gallery-filter">
-                <input type="text" id="gallery-filter" placeholder="Filter by monster name..." oninput="filterGallery()">
+                <select id="gallery-filter" onchange="filterGallery()">
+                    <option value="">All monsters</option>
+                </select>
+                <select id="author-filter" onchange="filterGallery()">
+                    <option value="">All authors</option>
+                </select>
+                <button onclick="resetGalleryFilters()">Reset Filters</button>
+            </div>
+            <div class="family-filter">
+                <button class="family-btn active" onclick="toggleFamilyFilter('ALL')" data-family="ALL">ALL</button>
+                <img class="family-btn" onclick="toggleFamilyFilter('Bird')" data-family="Bird" src="../assets/icons/family-icons/Family - Bird.png" alt="Bird" title="Bird">
+                <img class="family-btn" onclick="toggleFamilyFilter('Demon')" data-family="Demon" src="../assets/icons/family-icons/Family- Demon.png" alt="Demon" title="Demon">
+                <img class="family-btn" onclick="toggleFamilyFilter('Beast')" data-family="Beast" src="../assets/icons/family-icons/Family - Beast.png" alt="Beast" title="Beast">
+                <img class="family-btn" onclick="toggleFamilyFilter('Dragon')" data-family="Dragon" src="../assets/icons/family-icons/Family - Dragon.png" alt="Dragon" title="Dragon">
+                <img class="family-btn" onclick="toggleFamilyFilter('Material')" data-family="Material" src="../assets/icons/family-icons/Family - Material.png" alt="Material" title="Material">
+                <img class="family-btn" onclick="toggleFamilyFilter('Bug')" data-family="Bug" src="../assets/icons/family-icons/Family - Bug.png" alt="Bug" title="Bug">
+                <img class="family-btn" onclick="toggleFamilyFilter('Plant')" data-family="Plant" src="../assets/icons/family-icons/Family - Plant.png" alt="Plant" title="Plant">
+                <img class="family-btn" onclick="toggleFamilyFilter('Slime')" data-family="Slime" src="../assets/icons/family-icons/Family - Slime.png" alt="Slime" title="Slime">
+                <img class="family-btn" onclick="toggleFamilyFilter('?')" data-family="?" src="../assets/icons/family-icons/Family%20-%20%3F.png" alt="?" title="?">
             </div>
             <div id="gallery-grid"></div>
         </div>
@@ -152,13 +170,24 @@
 
     </div>
     
+    <!-- Preview Modal -->
+    <div id="preview-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('preview-modal').style.display = 'none'">&times;</span>
+            <h2 id="preview-title"></h2>
+            <canvas id="preview-canvas" width="256" height="256" style="border: 2px solid black; image-rendering: pixelated;"></canvas>
+            <p id="preview-parents"></p>
+            <p id="preview-author"></p>
+        </div>
+    </div>
     
     <!-- Save Modal -->
     <div id="save-modal" class="modal">
         <div class="modal-content">
             <span class="modal-close" onclick="closeSaveModal()">&times;</span>
             <h2>Save Monster</h2>
-            <input type="text" id="monster-name" placeholder="Monster name..." style="width: 100%; padding: 10px; margin: 20px 0; font-size: 16px;">
+            <input type="text" id="monster-name" placeholder="Monster name..." style="width: 100%; padding: 10px; margin: 20px 0 10px 0; font-size: 16px;">
+            <input type="text" id="monster-author" placeholder="Author (optional)..." style="width: 100%; padding: 10px; margin: 10px 0 20px 0; font-size: 16px;">
             <div class="modal-buttons">
                 <button onclick="saveCreation()">Save Monster</button>
                 <button onclick="exportCanvas()">Export</button>
@@ -169,7 +198,7 @@
     <!-- Monster Selection Modal -->
     <div id="monster-modal" class="modal">
         <div class="modal-content">
-            <span class="modal-close" onclick="closeModalToGallery()">&times;</span>
+            <span class="modal-close" onclick="document.getElementById('monster-modal').style.display = 'none'">&times;</span>
             <h2>Select Your Monsters</h2>
             <p>Choose 2 different monsters to create your hybrid creature:</p>
             
@@ -193,6 +222,7 @@
             
             <div class="modal-buttons">
                 <button onclick="confirmMonsterSelection()" id="confirm-btn" disabled>Start Creating</button>
+                <button onclick="closeModalToGallery()">View Gallery</button>
             </div>
         </div>
     </div>

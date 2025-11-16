@@ -61,6 +61,18 @@ function autoCropImage(imageData) {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
+    // Check if admin mode
+    if (window.location.pathname === '/admin') {
+        const password = prompt('Enter admin password:');
+        if (password !== 'dwm2isbest') {
+            alert('Invalid password');
+            window.location.href = '/';
+            return;
+        }
+        isAdminMode = true;
+        document.querySelector('h1').textContent = 'Monster Maker - Admin';
+    }
+    
     workspace = document.getElementById('workspace');
     ctx = workspace.getContext('2d');
     ctx.imageSmoothingEnabled = false;
@@ -75,7 +87,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMonsters();
     setupWorkspace();
     loadGallery();
-    openMonsterModal(); // Show modal on page load
+    
+    if (!isAdminMode) {
+        openMonsterModal(); // Show modal on page load only in normal mode
+    } else {
+        showTab('gallery'); // Go directly to gallery in admin mode
+    }
 });
 
 // Setup mobile-friendly canvas scaling
@@ -167,22 +184,13 @@ function loadMonster(slot) {
 // Check if part can be added based on limits
 function canAddPart(partName, monsterName) {
     const counts = {};
-    const monsterCounts = {};
     
     placedParts.forEach(part => {
-        const key = `${part.name}_${part.monster || ''}`;
         counts[part.name] = (counts[part.name] || 0) + 1;
-        monsterCounts[key] = (monsterCounts[key] || 0) + 1;
     });
     
-    // Torso: only 1 total (from either monster)
-    if (partName === 'torso') {
-        return (counts['torso'] || 0) < 1;
-    }
-    
-    // Other parts: 1 per monster (so 2 total max)
-    const monsterKey = `${partName}_${monsterName}`;
-    return (monsterCounts[monsterKey] || 0) < 1;
+    // Allow up to 2 of any part type
+    return (counts[partName] || 0) < 2;
 }
 
 // Update available parts list
@@ -373,6 +381,7 @@ function addPartToWorkspace(partDataUrl, partName, x, y, monsterName) {
         redrawWorkspace();
         updateLayersList();
         updateAvailableParts(); // Refresh parts list to update limits
+        updateSelectedMonstersDisplay(); // Update save button state
     };
     img.src = partDataUrl;
 }
@@ -602,6 +611,7 @@ function clearWorkspace() {
     drawGrid();
     updateLayersList();
     updateAvailableParts(); // Refresh parts list to make all parts available again
+    updateSelectedMonstersDisplay(); // Update save button state
 }
 
 // Save creation
@@ -612,6 +622,7 @@ async function saveCreation() {
         return;
     }
     
+    const author = document.getElementById('monster-author').value.trim() || 'Anonymous';
     const spriteData = workspace.toDataURL();
     const parentMonsters = Object.values(selectedMonsters)
         .filter(m => m)
@@ -624,13 +635,15 @@ async function saveCreation() {
             body: JSON.stringify({
                 name,
                 sprite: spriteData,
-                parentMonsters
+                parentMonsters,
+                author
             })
         });
         
         if (response.ok) {
             alert('Monster saved successfully!');
             document.getElementById('monster-name').value = '';
+            document.getElementById('monster-author').value = '';
             closeSaveModal();
             clearWorkspace();
             loadGallery();
@@ -642,6 +655,8 @@ async function saveCreation() {
 }
 
 let allCreations = [];
+let selectedFamilies = ['ALL'];
+let isAdminMode = false;
 
 // Load gallery
 async function loadGallery() {
@@ -671,7 +686,16 @@ function displayGallery(creations) {
         
         const img = new Image();
         img.onload = () => {
-            itemCtx.drawImage(img, 0, 0, 128, 128);
+            // Scale image to fit in 128x128 while maintaining aspect ratio
+            const scale = Math.min(128 / img.width, 128 / img.height);
+            const scaledWidth = img.width * scale;
+            const scaledHeight = img.height * scale;
+            
+            // Center the scaled image
+            const offsetX = (128 - scaledWidth) / 2;
+            const offsetY = (128 - scaledHeight) / 2;
+            
+            itemCtx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
         };
         img.src = creation.sprite;
         
@@ -682,23 +706,175 @@ function displayGallery(creations) {
         const parentList = JSON.parse(creation.parent_monsters);
         parents.textContent = `Made from: ${parentList.join(', ')}`;
         
+        const author = document.createElement('p');
+        author.textContent = `By: ${creation.author || 'Anonymous'}`;
+        author.style.fontStyle = 'italic';
+        author.style.fontSize = '0.9em';
+        
         item.appendChild(canvas);
         item.appendChild(name);
         item.appendChild(parents);
+        item.appendChild(author);
+        
+        // Add click handler for preview
+        item.style.cursor = 'pointer';
+        item.onclick = () => showCreationPreview(creation);
+        
+        if (isAdminMode) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.style.backgroundColor = '#dc3545';
+            deleteBtn.style.color = 'white';
+            deleteBtn.style.border = 'none';
+            deleteBtn.style.padding = '5px 10px';
+            deleteBtn.style.borderRadius = '4px';
+            deleteBtn.style.cursor = 'pointer';
+            deleteBtn.style.marginTop = '10px';
+            deleteBtn.onclick = () => deleteCreation(creation.id);
+            item.appendChild(deleteBtn);
+        }
+        
         gallery.appendChild(item);
     });
 }
 
-// Filter gallery by monster name
+// Delete creation (admin only)
+async function deleteCreation(id) {
+    if (!confirm('Are you sure you want to delete this creation?')) return;
+    
+    try {
+        const response = await fetch(`/api/creations/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            loadGallery(); // Refresh gallery
+        } else {
+            alert('Error deleting creation');
+        }
+    } catch (error) {
+        console.error('Error deleting creation:', error);
+        alert('Error deleting creation');
+    }
+}
+
+// Show creation preview
+function showCreationPreview(creation) {
+    document.getElementById('preview-title').textContent = creation.name;
+    document.getElementById('preview-parents').textContent = `Made from: ${JSON.parse(creation.parent_monsters).join(', ')}`;
+    document.getElementById('preview-author').textContent = `By: ${creation.author || 'Anonymous'}`;
+    
+    const canvas = document.getElementById('preview-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, 256, 256);
+    
+    const img = new Image();
+    img.onload = () => {
+        const scale = Math.min(256 / img.width, 256 / img.height);
+        const scaledWidth = img.width * scale;
+        const scaledHeight = img.height * scale;
+        const offsetX = (256 - scaledWidth) / 2;
+        const offsetY = (256 - scaledHeight) / 2;
+        
+        ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+    };
+    img.src = creation.sprite;
+    
+    document.getElementById('preview-modal').style.display = 'block';
+}
+
+// Toggle family filter
+function toggleFamilyFilter(family) {
+    const btn = document.querySelector(`[data-family="${family}"]`);
+    
+    if (family === 'ALL') {
+        selectedFamilies = ['ALL'];
+        document.querySelectorAll('.family-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    } else {
+        if (selectedFamilies.includes('ALL')) {
+            selectedFamilies = [family];
+            document.querySelector('[data-family="ALL"]').classList.remove('active');
+        } else if (selectedFamilies.includes(family)) {
+            selectedFamilies = selectedFamilies.filter(f => f !== family);
+            if (selectedFamilies.length === 0) {
+                selectedFamilies = ['ALL'];
+                document.querySelector('[data-family="ALL"]').classList.add('active');
+            }
+        } else {
+            selectedFamilies.push(family);
+        }
+        btn.classList.toggle('active');
+    }
+    
+    filterGallery();
+}
+
+// Filter gallery by monster name, author, and family
 function filterGallery() {
-    const filterText = document.getElementById('gallery-filter').value.toLowerCase();
+    const selectedMonster = document.getElementById('gallery-filter').value;
+    const selectedAuthor = document.getElementById('author-filter').value;
     
     const filtered = allCreations.filter(creation => {
         const parentList = JSON.parse(creation.parent_monsters);
-        return parentList.some(parent => parent.toLowerCase().includes(filterText));
+        
+        // Check name filter
+        const nameMatch = !selectedMonster || parentList.includes(selectedMonster);
+        
+        // Check author filter
+        const authorMatch = !selectedAuthor || (creation.author || 'Anonymous') === selectedAuthor;
+        
+        // Check family filter
+        let familyMatch = selectedFamilies.includes('ALL');
+        if (!familyMatch) {
+            familyMatch = parentList.some(parent => {
+                const monster = monsters.find(m => m.name === parent);
+                return monster && selectedFamilies.includes(monster.family);
+            });
+        }
+        
+        return nameMatch && authorMatch && familyMatch;
     });
     
     displayGallery(filtered);
+}
+
+// Populate gallery filter dropdowns
+function populateGalleryFilter() {
+    const monsterSelect = document.getElementById('gallery-filter');
+    monsterSelect.innerHTML = '<option value="">All monsters</option>';
+    
+    monsters.forEach(monster => {
+        const option = document.createElement('option');
+        option.value = monster.name;
+        option.textContent = monster.name;
+        monsterSelect.appendChild(option);
+    });
+    
+    // Populate author filter
+    const authorSelect = document.getElementById('author-filter');
+    authorSelect.innerHTML = '<option value="">All authors</option>';
+    
+    const authors = [...new Set(allCreations.map(c => c.author || 'Anonymous'))].sort();
+    authors.forEach(author => {
+        const option = document.createElement('option');
+        option.value = author;
+        option.textContent = author;
+        authorSelect.appendChild(option);
+    });
+}
+
+// Reset all gallery filters
+function resetGalleryFilters() {
+    // Reset dropdowns
+    document.getElementById('gallery-filter').value = '';
+    document.getElementById('author-filter').value = '';
+    
+    // Reset family filter to ALL
+    selectedFamilies = ['ALL'];
+    document.querySelectorAll('.family-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-family="ALL"]').classList.add('active');
+    
+    // Apply filters
+    filterGallery();
 }
 
 // Wipe database
@@ -865,6 +1041,7 @@ function removeSelectedPart() {
         redrawWorkspace();
         updateLayersList();
         updateAvailableParts(); // Refresh parts list to make removed part available again
+        updateSelectedMonstersDisplay(); // Update save button state
     }
 }
 
@@ -984,6 +1161,19 @@ function updateSelectedMonstersDisplay() {
             nameDisplay.textContent = '';
         }
     });
+    
+    // Update button states based on monster selection
+    const monstersSelected = Object.values(selectedMonsters).filter(m => m).length;
+    const changeBtn = document.getElementById('change-monsters-btn');
+    const saveBtn = document.getElementById('save-btn');
+    
+    if (monstersSelected === 0) {
+        changeBtn.textContent = 'Select Monsters';
+        saveBtn.disabled = true;
+    } else {
+        changeBtn.textContent = 'Change Monsters';
+        saveBtn.disabled = placedParts.length === 0;
+    }
 }
 
 // Close modal and go to gallery
@@ -1006,6 +1196,13 @@ function showTab(tabName) {
     
     if (tabName === 'gallery') {
         loadGallery();
+        populateGalleryFilter();
+        // Reset filters when opening gallery
+        selectedFamilies = ['ALL'];
+        document.querySelectorAll('.family-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('[data-family="ALL"]').classList.add('active');
+        document.getElementById('gallery-filter').value = '';
+        document.getElementById('author-filter').value = '';
     } else if (tabName === 'creator') {
         openMonsterModal();
     }
