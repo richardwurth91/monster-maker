@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hatched Monster Maker</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 2px solid #ccc;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #666;
+            padding: 5px 15px;
+        }
+        .nav-item.active {
+            color: #007bff;
+        }
+        .nav-item span:first-child {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+        .nav-item span:last-child {
+            font-size: 12px;
+        }
+        body {
+            padding-bottom: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hatched Monster Maker</h1>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('creator')">Create Monster</button>
+            <button class="tab-btn" onclick="showTab('gallery')">Gallery</button>
+        </div>
+
+        <div id="creator" class="tab-content active">
+            <div class="creator-layout">
+                <!-- Left side: Workspace -->
+                <div class="workspace-container">
+                    <div class="workspace-header">
+                        <h3>Workspace</h3>
+                        <div class="workspace-controls">
+                            <button onclick="clearWorkspace()">Clear All</button>
+                            <button id="save-btn" onclick="openSaveModal()" disabled>Save Creation</button>
+                        </div>
+                    </div>
+                    <canvas id="workspace" width="640" height="640"></canvas>
+                </div>
+                
+                <!-- Right side: Tools Panel -->
+                <div class="tools-sidebar">
+                    <!-- Monster Selection -->
+                    <div class="tool-section">
+                        <div class="section-header" onclick="toggleSection('monster-selection')">
+                            <h3>Monster Selection</h3>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div id="monster-selection-content" class="section-content">
+                            <button id="change-monsters-btn" onclick="openMonsterModal()">Select Monsters</button>
+                            <div class="selected-monsters">
+                                <div class="selected-monster">
+                                    <div id="selected-monster1">Not selected</div>
+                                    <div id="selected-name1"></div>
+                                </div>
+                                <div class="selected-monster">
+                                    <div id="selected-monster2">Not selected</div>
+                                    <div id="selected-name2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Parts Panel -->
+                    <div class="tool-section">
+                        <div class="section-header" onclick="toggleSection('parts')">
+                            <h3>Monster Parts</h3>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div id="parts-content" class="section-content">
+                            <div class="parts-container">
+                                <div class="monster-parts">
+                                    <h4 id="monster1-parts-title">Monster 1</h4>
+                                    <div id="monster1-parts"></div>
+                                </div>
+                                <div class="monster-parts">
+                                    <h4 id="monster2-parts-title">Monster 2</h4>
+                                    <div id="monster2-parts"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div class="tool-section">
+                        <div class="section-header" onclick="toggleSection('palette')">
+                            <h3>Color Palette</h3>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div id="palette-content" class="section-content">
+                            <div class="palette-controls">
+                                <button class="palette-btn active" data-palette="original" onclick="setPalette('original')">Original</button>
+                                <button class="palette-btn" data-palette="monster1" onclick="setPalette('monster1')">Monster 1</button>
+                                <button class="palette-btn" data-palette="monster2" onclick="setPalette('monster2')">Monster 2</button>
+                                <button class="palette-btn" data-palette="custom" onclick="setPalette('custom')">Custom</button>
+                            </div>
+                            <div id="palette-display"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Transform Tools -->
+                    <div class="tool-section">
+                        <div class="section-header" onclick="toggleSection('transform')">
+                            <h3>Transform Tools</h3>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div id="transform-content" class="section-content">
+                            <div class="transform-group">
+                                <h4>Scale</h4>
+                                <div class="button-group">
+                                    <button onclick="adjustScale(-0.25)">-</button>
+                                    <button onclick="resetScale()">Reset</button>
+                                    <button onclick="adjustScale(0.25)">+</button>
+                                </div>
+                            </div>
+                            <div class="transform-group">
+                                <h4>Rotate</h4>
+                                <div class="button-group">
+                                    <button onclick="rotateSelectedPart(-90)">↺ 90°</button>
+                                    <button onclick="rotateSelectedPart(90)">↻ 90°</button>
+                                </div>
+                            </div>
+                            <div class="transform-group">
+                                <h4>Flip</h4>
+                                <div class="button-group">
+                                    <button onclick="flipSelectedPart('horizontal')">↔ Horizontal</button>
+                                    <button onclick="flipSelectedPart('vertical')">↕ Vertical</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Layers Panel -->
+                    <div class="tool-section">
+                        <div class="section-header" onclick="toggleSection('layers')">
+                            <h3>Layers</h3>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div id="layers-content" class="section-content">
+                            <div id="layers-list"></div>
+                            <div class="layer-controls">
+                                <button onclick="moveLayerUp()">Move Up</button>
+                                <button onclick="moveLayerDown()">Move Down</button>
+                                <button onclick="removeSelectedPart()">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="gallery" class="tab-content">
+            <h2>Monster Gallery</h2>
+            <div class="gallery-filter">
+                <select id="gallery-filter" onchange="filterGallery()">
+                    <option value="">All monsters</option>
+                </select>
+                <select id="author-filter" onchange="filterGallery()">
+                    <option value="">All authors</option>
+                </select>
+                <button onclick="resetGalleryFilters()">Reset Filters</button>
+            </div>
+            <div class="family-filter">
+                <button class="family-btn active" onclick="toggleFamilyFilter('ALL')" data-family="ALL">ALL</button>
+                <img class="family-btn" onclick="toggleFamilyFilter('Bird')" data-family="Bird" src="../assets/icons/family-icons/Family - Bird.png" alt="Bird" title="Bird">
+                <img class="family-btn" onclick="toggleFamilyFilter('Demon')" data-family="Demon" src="../assets/icons/family-icons/Family- Demon.png" alt="Demon" title="Demon">
+                <img class="family-btn" onclick="toggleFamilyFilter('Beast')" data-family="Beast" src="../assets/icons/family-icons/Family - Beast.png" alt="Beast" title="Beast">
+                <img class="family-btn" onclick="toggleFamilyFilter('Dragon')" data-family="Dragon" src="../assets/icons/family-icons/Family - Dragon.png" alt="Dragon" title="Dragon">
+                <img class="family-btn" onclick="toggleFamilyFilter('Material')" data-family="Material" src="../assets/icons/family-icons/Family - Material.png" alt="Material" title="Material">
+                <img class="family-btn" onclick="toggleFamilyFilter('Bug')" data-family="Bug" src="../assets/icons/family-icons/Family - Bug.png" alt="Bug" title="Bug">
+                <img class="family-btn" onclick="toggleFamilyFilter('Plant')" data-family="Plant" src="../assets/icons/family-icons/Family - Plant.png" alt="Plant" title="Plant">
+                <img class="family-btn" onclick="toggleFamilyFilter('Slime')" data-family="Slime" src="../assets/icons/family-icons/Family - Slime.png" alt="Slime" title="Slime">
+                <img class="family-btn" onclick="toggleFamilyFilter('Water')" data-family="Water" src="../assets/icons/family-icons/Family - Water.png" alt="Water" title="Water">
+                <img class="family-btn" onclick="toggleFamilyFilter('Zombie')" data-family="Zombie" src="../assets/icons/family-icons/Family - Zombie.png" alt="Zombie" title="Zombie">
+                <img class="family-btn" onclick="toggleFamilyFilter('?')" data-family="?" src="../assets/icons/family-icons/Family%20-%20%3F.png" alt="?" title="?">
+            </div>
+            <div id="gallery-grid"></div>
+        </div>
+        
+
+    </div>
+    
+    <nav class="bottom-nav">
+        <a href="egg-shop.html" class="nav-item">
+            <span>🥚</span>
+            <span>Shop</span>
+        </a>
+        <a href="egg-doctor.html" class="nav-item">
+            <span>🔬</span>
+            <span>Doctor</span>
+        </a>
+        <a href="hatched-monster-maker.html" class="nav-item active">
+            <span>⚒️</span>
+            <span>Maker</span>
+        </a>
+    </nav>
+    
+    <!-- Preview Modal -->
+    <div id="preview-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('preview-modal').style.display = 'none'">&times;</span>
+            <h2 id="preview-title"></h2>
+            <canvas id="preview-canvas" width="256" height="256" style="border: 2px solid black; image-rendering: pixelated;"></canvas>
+            <p id="preview-parents"></p>
+            <p id="preview-author"></p>
+            <div class="modal-buttons">
+                <button id="remix-btn" onclick="remixCreation()">Remix</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Save Modal -->
+    <div id="save-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeSaveModal()">&times;</span>
+            <h2>Save Monster</h2>
+            <input type="text" id="monster-name" placeholder="Monster name..." style="width: 100%; padding: 10px; margin: 20px 0 10px 0; font-size: 16px;">
+            <input type="text" id="monster-author" placeholder="Author (optional)..." style="width: 100%; padding: 10px; margin: 10px 0 20px 0; font-size: 16px;">
+            <div class="modal-buttons">
+                <button onclick="saveCreation()">Save Monster</button>
+                <button onclick="exportCanvas()">Export</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Monster Selection Modal -->
+    <div id="monster-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('monster-modal').style.display = 'none'">&times;</span>
+            <h2>Select Your Hatched Monsters</h2>
+            <p>Choose 2 different hatched monsters to create your hybrid creature:</p>
+            
+            <div class="modal-monsters">
+                <div class="modal-monster-select">
+                    <h3>Monster 1</h3>
+                    <div id="modal-preview1" class="modal-preview" onclick="openMonsterSelector(1)">No monster selected</div>
+                    <button onclick="openMonsterSelector(1)">Choose Monster</button>
+                </div>
+                
+                <div class="modal-monster-select">
+                    <h3>Monster 2</h3>
+                    <div id="modal-preview2" class="modal-preview" onclick="openMonsterSelector(2)">No monster selected</div>
+                    <button onclick="openMonsterSelector(2)">Choose Monster</button>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button onclick="confirmMonsterSelection()" id="confirm-btn" disabled>Start Creating</button>
+                <button onclick="window.location.href='egg-shop.html'">Go to Egg Shop</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+<!-- Monster Selector Modal -->
+<div id="monster-selector-modal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" onclick="document.getElementById('monster-selector-modal').style.display = 'none'">&times;</span>
+        <h2 id="selector-title">Select Hatched Monster</h2>
+        
+        <!-- Monster Filters -->
+        <div class="modal-filters">
+            <input type="text" id="monster-name-filter" placeholder="Search monsters..." oninput="filterModalMonsters()">
+            <div class="modal-family-filter">
+                <button class="family-btn active" onclick="toggleModalFamilyFilter('ALL')" data-family="ALL">ALL</button>
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Bird')" data-family="Bird" src="../assets/icons/family-icons/Family - Bird.png" alt="Bird" title="Bird">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Demon')" data-family="Demon" src="../assets/icons/family-icons/Family- Demon.png" alt="Demon" title="Demon">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Beast')" data-family="Beast" src="../assets/icons/family-icons/Family - Beast.png" alt="Beast" title="Beast">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Dragon')" data-family="Dragon" src="../assets/icons/family-icons/Family - Dragon.png" alt="Dragon" title="Dragon">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Material')" data-family="Material" src="../assets/icons/family-icons/Family - Material.png" alt="Material" title="Material">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Bug')" data-family="Bug" src="../assets/icons/family-icons/Family - Bug.png" alt="Bug" title="Bug">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Plant')" data-family="Plant" src="../assets/icons/family-icons/Family - Plant.png" alt="Plant" title="Plant">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Slime')" data-family="Slime" src="../assets/icons/family-icons/Family - Slime.png" alt="Slime" title="Slime">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Water')" data-family="Water" src="../assets/icons/family-icons/Family - Water.png" alt="Water" title="Water">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('Zombie')" data-family="Zombie" src="../assets/icons/family-icons/Family - Zombie.png" alt="Zombie" title="Zombie">
+                <img class="family-btn" onclick="toggleModalFamilyFilter('?')" data-family="?" src="../assets/icons/family-icons/Family%20-%20%3F.png" alt="?" title="?">
+            </div>
+        </div>
+        
+        <div id="monster-selector-grid" class="monster-grid"></div>
+    </div>
+</div>

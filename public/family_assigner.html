@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Assigner</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .monster-item { 
+            display: flex; 
+            align-items: center; 
+            margin: 10px 0; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+        }
+        .monster-sprite { margin-right: 15px; }
+        .monster-name { font-weight: bold; margin-right: 20px; min-width: 150px; }
+        .family-icons { display: flex; gap: 10px; }
+        .family-icon { 
+            width: 40px; 
+            height: 40px; 
+            cursor: pointer; 
+            border: 2px solid #ddd; 
+            border-radius: 4px; 
+        }
+        .family-icon:hover { border-color: #007bff; }
+        .assigned-family { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            background: #e8f5e8; 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+        }
+        .remove-btn { 
+            background: #dc3545; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 12px; 
+        }
+        .clear-btn { 
+            background: #dc3545; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin-bottom: 20px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Monster Family Assigner</h1>
+    <button class="clear-btn" onclick="clearAllFamilies()">Clear All Families</button>
+    <div id="monsters-list"></div>
+
+    <script>
+        const families = [
+            { name: 'Bird', icon: '../assets/icons/family-icons/Family - Bird.png' },
+            { name: 'Demon', icon: '../assets/icons/family-icons/Family- Demon.png' },
+            { name: 'Beast', icon: '../assets/icons/family-icons/Family - Beast.png' },
+            { name: 'Dragon', icon: '../assets/icons/family-icons/Family - Dragon.png' },
+            { name: 'Material', icon: '../assets/icons/family-icons/Family - Material.png' },
+            { name: 'Bug', icon: '../assets/icons/family-icons/Family - Bug.png' },
+            { name: 'Plant', icon: '../assets/icons/family-icons/Family - Plant.png' },
+            { name: 'Slime', icon: '../assets/icons/family-icons/Family - Slime.png' },
+            { name: 'Water', icon: '../assets/icons/family-icons/Family - Water.png' },
+            { name: 'Zombie', icon: '../assets/icons/family-icons/Family - Zombie.png' },
+            { name: '?', icon: '../assets/icons/family-icons/Family%20-%20%3F.png' }
+        ];
+
+        async function loadUnassignedMonsters() {
+            const response = await fetch('/api/unassigned-monsters');
+            const monsters = await response.json();
+            
+            const container = document.getElementById('monsters-list');
+            container.innerHTML = '';
+            
+            monsters.forEach(monster => {
+                const item = document.createElement('div');
+                item.className = 'monster-item';
+                item.id = `monster-${monster.id}`;
+                
+                const sprite = document.createElement('canvas');
+                sprite.className = 'monster-sprite';
+                sprite.width = 48;
+                sprite.height = 48;
+                const ctx = sprite.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                
+                const img = new Image();
+                img.onload = () => ctx.drawImage(img, 0, 0, 48, 48);
+                img.src = monster.sprite;
+                
+                const name = document.createElement('div');
+                name.className = 'monster-name';
+                name.textContent = monster.name;
+                
+                const rightSection = document.createElement('div');
+                
+                if (monster.family) {
+                    const assignedDiv = document.createElement('div');
+                    assignedDiv.className = 'assigned-family';
+                    
+                    const familyIcon = document.createElement('img');
+                    familyIcon.className = 'family-icon';
+                    const family = families.find(f => f.name === monster.family);
+                    if (family) {
+                        familyIcon.src = family.icon;
+                        familyIcon.title = family.name;
+                    }
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-btn';
+                    removeBtn.textContent = 'Remove Family';
+                    removeBtn.onclick = () => removeFamily(monster.id);
+                    
+                    assignedDiv.appendChild(familyIcon);
+                    assignedDiv.appendChild(removeBtn);
+                    rightSection.appendChild(assignedDiv);
+                } else {
+                    const icons = document.createElement('div');
+                    icons.className = 'family-icons';
+                    
+                    families.forEach(family => {
+                        const icon = document.createElement('img');
+                        icon.className = 'family-icon';
+                        icon.src = family.icon;
+                        icon.title = family.name;
+                        icon.onclick = () => assignFamily(monster.id, family.name);
+                        icons.appendChild(icon);
+                    });
+                    
+                    rightSection.appendChild(icons);
+                }
+                
+                item.appendChild(sprite);
+                item.appendChild(name);
+                item.appendChild(rightSection);
+                container.appendChild(item);
+            });
+        }
+
+        async function assignFamily(monsterId, family) {
+            await fetch('/api/assign-family', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ monsterId, family })
+            });
+            
+            loadUnassignedMonsters();
+        }
+
+        async function removeFamily(monsterId) {
+            await fetch('/api/remove-family', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ monsterId })
+            });
+            
+            loadUnassignedMonsters();
+        }
+
+        async function clearAllFamilies() {
+            if (confirm('Clear all family assignments?')) {
+                await fetch('/api/clear-families', { method: 'POST' });
+                loadUnassignedMonsters();
+            }
+        }
+
+        loadUnassignedMonsters();
+    </script>
+</body>
+</html>
