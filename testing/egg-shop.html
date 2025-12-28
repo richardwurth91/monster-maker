@@ -82,6 +82,7 @@
         </div>
         
         <button onclick="window.location.href='egg-doctor.html'">Egg Doctor</button>
+        <button onclick="resetProgress()">Reset Progress</button>
         
         <div id="result" class="result" style="display: none;"></div>
     
@@ -196,6 +197,20 @@
             
             updateGold();
             updateInventory();
+        }
+
+        function resetProgress() {
+            if (confirm('Are you sure you want to reset all progress? This will clear your gold, inventory, and hatched monsters.')) {
+                localStorage.removeItem('gold');
+                localStorage.removeItem('inventory');
+                localStorage.removeItem('hatched');
+                gold = 100;
+                inventory = [];
+                hatched = [];
+                updateGold();
+                updateInventory();
+                updateHatched();
+            }
         }
 
         // Initialize

@@ -2778,7 +2778,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           </skills>
           <growth agl="8" int="14" maxlvl="35" atk="12" mp="17" exp="11" hp="14" def="12"/>
         </monster>
-        <monster name="Roboster1" in_story="true">
+        <monster name="Roboster" in_story="true">
           <spawn-locations>
             <location>
               <map>Sky Key World</map>
@@ -3548,7 +3548,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           </skills>
           <growth agl="23" int="23" maxlvl="60" atk="26" mp="30" exp="27" hp="21" def="21"/>
         </monster>
-        <monster name="Darck" in_story="false">
+        <monster name="DeathMore" in_story="false">
           <skills>
             <skill>Firebal</skill>
             <skill>Bang</skill>
@@ -3572,7 +3572,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           </skills>
           <growth agl="24" int="21" maxlvl="80" atk="27" mp="30" exp="29" hp="30" def="18"/>
         </monster>
-        <monster name="DeathMore2" in_story="false">
+        <monster name="DeathMore (Transformed)" in_story="false">
           <skills>
             <skill>FireAir</skill>
             <skill>Ramming</skill>
@@ -3596,7 +3596,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           </skills>
           <growth agl="23" int="23" maxlvl="80" atk="26" mp="30" exp="31" hp="29" def="24"/>
         </monster>
-        <monster name="DeathMore3" in_story="false">
+        <monster name="DeathMore (Final Form)" in_story="false">
           <skills>
             <skill>BigBang</skill>
             <skill>DeMagic</skill>
@@ -3620,7 +3620,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           </skills>
           <growth agl="22" int="21" maxlvl="60" atk="20" mp="30" exp="24" hp="20" def="20"/>
         </monster>
-        <monster name="Mirudraas1" in_story="false">
+        <monster name="Mirudraas" in_story="false">
           <skills>
             <skill>Blaze</skill>
             <skill>Bang</skill>
@@ -3636,7 +3636,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           </skills>
           <growth agl="23" int="23" maxlvl="80" atk="31" mp="30" exp="30" hp="31" def="24"/>
         </monster>
-        <monster name="DracoLord2" in_story="false">
+        <monster name="DracoLord (Dragon)" in_story="false">
           <skills>
             <skill>FireAir</skill>
             <skill>Massacre</skill>
@@ -3652,7 +3652,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           </skills>
           <growth agl="23" int="23" maxlvl="70" atk="26" mp="30" exp="25" hp="24" def="21"/>
         </monster>
-        <monster name="Mirudraas2" in_story="false">
+        <monster name="Mirudraas (Transformed)" in_story="false">
           <skills>
             <skill>FireAir</skill>
             <skill>DeMagic</skill>
@@ -3660,7 +3660,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           </skills>
           <growth agl="23" int="23" maxlvl="80" atk="26" mp="30" exp="31" hp="29" def="21"/>
         </monster>
-        <monster name="Orgodemir1" in_story="false">
+        <monster name="Orgodemir" in_story="false">
           <skills>
             <skill>Bang</skill>
             <skill>EvilSlash</skill>
@@ -3983,7 +3983,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="slime"/>
       </base>
       <mate>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
       </mate>
     </breed>
     <breed target="SlimeBorg">
@@ -4786,7 +4786,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
       <mate>
         <breed-requirement family="devil"/>
         <breed-requirement monster="MetalDrak"/>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
       </mate>
     </breed>
     <breed target="Grizzly">
@@ -4849,7 +4849,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Trumpeter"/>
       </base>
       <mate>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
         <breed-requirement monster="LavaMan"/>
         <breed-requirement monster="IceMan"/>
         <breed-requirement monster="Golem"/>
@@ -5098,7 +5098,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
       <mate>
         <breed-requirement monster="Golem"/>
         <breed-requirement monster="StoneMan"/>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
       </mate>
     </breed>
     <breed target="Trumpeter">
@@ -6818,7 +6818,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Gigantes"/>
       </base>
       <mate>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
         <breed-requirement monster="WalrusMan"/>
         <breed-requirement monster="MerTiger"/>
       </mate>
@@ -6967,7 +6967,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
       </base>
       <mate>
         <breed-requirement monster="MetalDrak"/>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
       </mate>
     </breed>
     <breed target="DeadNoble">
@@ -7502,7 +7502,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="BombCrag">
       <base>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
         <breed-requirement monster="DarkMate"/>
       </base>
       <mate>
@@ -7572,7 +7572,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="CurseLamp">
       <base>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
       </base>
       <mate>
         <breed-requirement family="bird"/>
@@ -7709,7 +7709,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="IceMan">
       <base>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
         <breed-requirement monster="Roboster2"/>
       </base>
       <mate>
@@ -7773,7 +7773,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     <breed target="MetalDrak">
       <base>
         <breed-requirement monster="MetalDrak"/>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
       </base>
       <mate>
         <breed-requirement family="dragon"/>
@@ -7789,7 +7789,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Mimic">
       <base>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
       </base>
       <mate>
         <breed-requirement family="zombie"/>
@@ -7823,7 +7823,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="ProtoMech">
       <base>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
       </base>
       <mate>
         <breed-requirement family="slime"/>
@@ -7845,7 +7845,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Gremlin"/>
       </mate>
     </breed>
-    <breed target="Roboster1">
+    <breed target="Roboster">
       <base>
         <breed-requirement monster="SabreMan"/>
       </base>
@@ -7855,7 +7855,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Unicorn"/>
       </mate>
     </breed>
-    <breed target="Roboster1">
+    <breed target="Roboster">
       <base>
         <breed-requirement monster="SabreMan"/>
       </base>
@@ -7865,7 +7865,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="EvilArmor"/>
       </mate>
     </breed>
-    <breed target="Roboster1">
+    <breed target="Roboster">
       <base>
         <breed-requirement monster="SabreMan"/>
       </base>
@@ -7873,7 +7873,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="DeadNoble"/>
       </mate>
     </breed>
-    <breed target="Roboster1">
+    <breed target="Roboster">
       <base>
         <breed-requirement monster="SabreMan"/>
       </base>
@@ -7881,7 +7881,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Skeletor"/>
       </mate>
     </breed>
-    <breed target="Roboster1">
+    <breed target="Roboster">
       <base>
         <breed-requirement family="material"/>
       </base>
@@ -7891,7 +7891,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Trumpeter"/>
       </mate>
     </breed>
-    <breed target="Roboster1">
+    <breed target="Roboster">
       <base>
         <breed-requirement family="material"/>
       </base>
@@ -7902,10 +7902,10 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Roboster2">
       <base>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
       </base>
       <mate>
-        <breed-requirement monster="Roboster1"/>
+        <breed-requirement monster="Roboster"/>
         <breed-requirement monster="Roboster2"/>
       </mate>
     </breed>
