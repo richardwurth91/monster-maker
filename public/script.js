@@ -744,9 +744,9 @@ function updateAvailableParts() {
                     
                     // Handle click for adding parts
                     const addPartHandler = (e) => {
-                        // Add part to center of canvas
-                        const centerX = Math.floor((320 - 16) / 10) * 10;
-                        const centerY = Math.floor((320 - 16) / 10) * 10;
+                        // Add part to center of canvas (320 is half of 640)
+                        const centerX = 320;
+                        const centerY = 320;
                         addPartToWorkspace(croppedData, partName, centerX, centerY, monster.name);
                     };
                     
@@ -830,18 +830,26 @@ function drawGrid() {
 function addPartToWorkspace(partDataUrl, partName, x, y, monsterName) {
     const img = new Image();
     img.onload = () => {
+        // Calculate part dimensions
+        const partWidth = img.width * 5;
+        const partHeight = img.height * 5;
+        
+        // Center the part at the given coordinates
+        const centeredX = x - (partWidth / 2);
+        const centeredY = y - (partHeight / 2);
+        
         const part = {
             id: Date.now(),
             name: partName,
             monster: monsterName,
             dataUrl: partDataUrl,
             originalDataUrl: partDataUrl,
-            x: x,
-            y: y,
-            width: img.width * 5,
-            height: img.height * 5,
-            originalWidth: img.width * 5,
-            originalHeight: img.height * 5,
+            x: centeredX,
+            y: centeredY,
+            width: partWidth,
+            height: partHeight,
+            originalWidth: partWidth,
+            originalHeight: partHeight,
             scale: 1,
             rotation: 0,
             flipHorizontal: false,
@@ -1333,7 +1341,12 @@ let isAdminMode = false;
 async function loadGallery() {
     try {
         const response = await fetch('/api/creations');
-        allCreations = await response.json();
+        const allCreationsData = await response.json();
+        // Filter out part-maker creations from main gallery
+        allCreations = allCreationsData.filter(creation => 
+            creation.source !== 'part-maker' && 
+            !(creation.creation_data && creation.creation_data.includes('selectedParts'))
+        );
         displayGallery(allCreations);
     } catch (error) {
         console.error('Error loading gallery:', error);

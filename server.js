@@ -49,6 +49,13 @@ db.serialize(() => {
     FOREIGN KEY (monster_id) REFERENCES monsters(id)
   )`);
   
+  db.run(`CREATE TABLE IF NOT EXISTS joints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    part_id TEXT NOT NULL,
+    joints TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  
   // Add family column if it doesn't exist and update existing records
   db.run(`ALTER TABLE monsters ADD COLUMN family TEXT`, (err) => {
     if (err && !err.message.includes('duplicate column')) {
@@ -87,10 +94,12 @@ db.serialize(() => {
     }
   });
   
-  // Add creation_data column if it doesn't exist
-  db.run(`ALTER TABLE creations ADD COLUMN creation_data TEXT`, (err) => {
+  // Add source column if it doesn't exist
+  db.run(`ALTER TABLE creations ADD COLUMN source TEXT DEFAULT 'main'`, (err) => {
     if (err && !err.message.includes('duplicate column')) {
-      console.error('Error adding creation_data column:', err);
+      console.error('Error adding source column:', err);
+    } else {
+      db.run('UPDATE creations SET source = "main" WHERE source IS NULL');
     }
   });
   
@@ -454,18 +463,38 @@ app.post('/api/monsters', (req, res) => {
 });
 
 app.get('/api/creations', (req, res) => {
-  db.all('SELECT * FROM creations ORDER BY created_at DESC', (err, rows) => {
+  const { source } = req.query;
+  let query = 'SELECT * FROM creations';
+  let params = [];
+  
+  if (source) {
+    query += ' WHERE source = ?';
+    params.push(source);
+  }
+  
+  query += ' ORDER BY created_at DESC';
+  
+  db.all(query, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
 
 app.post('/api/creations', (req, res) => {
-  const { name, sprite, parentMonsters, author, creationData } = req.body;
-  db.run('INSERT INTO creations (name, sprite, parent_monsters, author, creation_data) VALUES (?, ?, ?, ?, ?)', 
-    [name, sprite, JSON.stringify(parentMonsters), author || 'Anonymous', JSON.stringify(creationData)], function(err) {
+  const { name, sprite, parentMonsters, author, creationData, source } = req.body;
+  db.run('INSERT INTO creations (name, sprite, parent_monsters, author, creation_data, source) VALUES (?, ?, ?, ?, ?, ?)', 
+    [name, sprite, JSON.stringify(parentMonsters), author || 'Anonymous', JSON.stringify(creationData), source || 'main'], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ id: this.lastID });
+  });
+});
+
+app.put('/api/creations/:id', (req, res) => {
+  const { id } = req.params;
+  const { author } = req.body;
+  db.run('UPDATE creations SET author = ? WHERE id = ?', [author, id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
   });
 });
 
@@ -610,8 +639,74 @@ app.post('/api/clear-families', (req, res) => {
   });
 });
 
+app.post('/api/rename-monster', (req, res) => {
+  const { monsterId, newName } = req.body;
+  db.run('UPDATE monsters SET name = ? WHERE id = ?', [newName, monsterId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.post('/api/delete-monster', (req, res) => {
+  const { monsterId } = req.body;
+  db.run('DELETE FROM monsters WHERE id = ?', [monsterId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Get parts with joints
+app.get('/api/parts-with-joints', (req, res) => {
+  const query = `
+    SELECT DISTINCT part_id, joints 
+    FROM joints 
+    WHERE joints IS NOT NULL AND joints != '[]'
+  `;
+  
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    
+    const partsWithJoints = {};
+    rows.forEach(row => {
+      partsWithJoints[row.part_id] = JSON.parse(row.joints);
+    });
+    
+    res.json(partsWithJoints);
+  });
+});
+
+// Joint API endpoints
+app.get('/api/joints/:partId', (req, res) => {
+  const { partId } = req.params;
+  db.get('SELECT joints FROM joints WHERE part_id = ? ORDER BY created_at DESC LIMIT 1', [partId], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'No joints found' });
+    res.json(JSON.parse(row.joints));
+  });
+});
+
+app.post('/api/joints', (req, res) => {
+  const { partId, joints } = req.body;
+  db.run('INSERT OR REPLACE INTO joints (part_id, joints) VALUES (?, ?)', 
+    [partId, JSON.stringify(joints)], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.delete('/api/joints/:partId', (req, res) => {
+  const { partId } = req.params;
+  db.run('DELETE FROM joints WHERE part_id = ?', [partId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
 });
 
 app.listen(PORT, '0.0.0.0', () => {

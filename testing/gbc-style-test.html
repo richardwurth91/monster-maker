@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RPGUI Monster Shop</title>
+    <link rel="stylesheet" href="/RPGUI/rpgui.css">
+    <script src="/RPGUI/rpgui.js"></script>
+    <style>
+        body { background: #2a4d3a; }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .sample-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .sample-item {
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content">
+        <h1 style="text-align: center; margin-bottom: 30px;">Monster Part Shop</h1>
+        
+        <div class="container">
+            <!-- Single RPGUI Example -->
+            <div class="rpgui-container framed rpgui-draggable">
+                <h2>Monster Part Shop</h2>
+                <hr>
+                <h3>MONSTER PART SHOP</h3>
+                <p>GOLD: 295G</p>
+                <div class="sample-grid">
+                    <div class="rpgui-container framed-grey sample-item">
+                        <p>RANDOM PART #1<br>10G</p>
+                    </div>
+                    <div class="rpgui-container framed-grey sample-item">
+                        <p>RANDOM PART #2<br>10G</p>
+                    </div>
+                </div>
+                <button class="rpgui-button"><p>BUY</p></button>
+                <button class="rpgui-button"><p>INVENTORY</p></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize RPGUI progress bars
+        document.addEventListener('DOMContentLoaded', () => {
+            const progressBars = document.querySelectorAll('.rpgui-progress');
+            progressBars.forEach(bar => {
+                const value = bar.getAttribute('data-value');
+                if (value) {
+                    RPGUI.set_value(bar, parseFloat(value));
+                }
+            });
+        });
+    </script>
+</body>
+</html>

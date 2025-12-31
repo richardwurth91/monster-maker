@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Slider Window Tests</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1, h2 { color: #333; }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        /* Style 1: Slide from Right */
+        .slider1-container {
+            position: relative;
+            height: 300px;
+            overflow: hidden;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+        
+        .slider1-main {
+            background: #f8f9fa;
+            height: 100%;
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .slider1-panel {
+            position: absolute;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100%;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            padding: 20px;
+            transition: right 0.3s ease;
+            border-left: 2px solid #2196f3;
+        }
+        
+        .slider1-container.open .slider1-main {
+            transform: translateX(-300px);
+        }
+        
+        .slider1-container.open .slider1-panel {
+            right: 0;
+        }
+        
+        /* Style 2: Overlay Slide */
+        .slider2-container {
+            position: relative;
+            height: 300px;
+            overflow: hidden;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+        
+        .slider2-main {
+            background: #f8f9fa;
+            height: 100%;
+            padding: 20px;
+        }
+        
+        .slider2-panel {
+            position: absolute;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 100%;
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            padding: 20px;
+            transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.2);
+            border-left: 3px solid #ff9800;
+        }
+        
+        .slider2-container.open .slider2-panel {
+            right: 0;
+        }
+        
+        /* Style 3: Accordion Style */
+        .slider3-container {
+            display: flex;
+            height: 300px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .slider3-main {
+            background: #f8f9fa;
+            flex: 1;
+            padding: 20px;
+            transition: flex 0.3s ease;
+        }
+        
+        .slider3-panel {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            width: 0;
+            padding: 0;
+            transition: all 0.3s ease;
+            border-left: 3px solid #9c27b0;
+            overflow: hidden;
+        }
+        
+        .slider3-container.open .slider3-main {
+            flex: 0.6;
+        }
+        
+        .slider3-container.open .slider3-panel {
+            width: 300px;
+            padding: 20px;
+        }
+        
+        /* Style 4: Push with Scale */
+        .slider4-container {
+            position: relative;
+            height: 300px;
+            overflow: hidden;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+        
+        .slider4-main {
+            background: #f8f9fa;
+            height: 100%;
+            padding: 20px;
+            transition: all 0.4s ease;
+            transform-origin: left center;
+        }
+        
+        .slider4-panel {
+            position: absolute;
+            top: 0;
+            right: -320px;
+            width: 320px;
+            height: 100%;
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            padding: 20px;
+            transition: right 0.4s ease;
+            border-left: 3px solid #4caf50;
+        }
+        
+        .slider4-container.open .slider4-main {
+            transform: translateX(-160px) scale(0.8);
+        }
+        
+        .slider4-container.open .slider4-panel {
+            right: 0;
+        }
+        
+        .sample-content {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+        
+        .panel-content {
+            background: rgba(255,255,255,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Horizontal Slider Window Tests</h1>
+    
+    <div class="test-section">
+        <h2>Style 1: Slide from Right (Push)</h2>
+        <button onclick="toggle1()">Toggle Panel</button>
+        <div id="slider1" class="slider1-container">
+            <div class="slider1-main">
+                <h3>Main Content Area</h3>
+                <div class="sample-content">This is the main content that gets pushed to the left when the panel opens.</div>
+                <div class="sample-content">Content stays visible but moves aside.</div>
+            </div>
+            <div class="slider1-panel">
+                <h3>Side Panel</h3>
+                <div class="panel-content">Panel content goes here</div>
+                <div class="panel-content">More panel items</div>
+                <div class="panel-content">Additional content</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Style 2: Overlay Slide</h2>
+        <button onclick="toggle2()">Toggle Panel</button>
+        <div id="slider2" class="slider2-container">
+            <div class="slider2-main">
+                <h3>Main Content Area</h3>
+                <div class="sample-content">This content stays in place while the panel slides over it.</div>
+                <div class="sample-content">The panel appears as an overlay with shadow.</div>
+            </div>
+            <div class="slider2-panel">
+                <h3>Overlay Panel</h3>
+                <div class="panel-content">Overlay panel content</div>
+                <div class="panel-content">Slides over main content</div>
+                <div class="panel-content">Has drop shadow</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Style 3: Accordion Style</h2>
+        <button onclick="toggle3()">Toggle Panel</button>
+        <div id="slider3" class="slider3-container">
+            <div class="slider3-main">
+                <h3>Main Content Area</h3>
+                <div class="sample-content">Main content shrinks smoothly as panel expands.</div>
+                <div class="sample-content">Both areas remain visible and functional.</div>
+            </div>
+            <div class="slider3-panel">
+                <h3>Accordion Panel</h3>
+                <div class="panel-content">Panel expands from zero width</div>
+                <div class="panel-content">Smooth accordion animation</div>
+                <div class="panel-content">Content appears as it expands</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Style 4: Push with Scale</h2>
+        <button onclick="toggle4()">Toggle Panel</button>
+        <div id="slider4" class="slider4-container">
+            <div class="slider4-main">
+                <h3>Main Content Area</h3>
+                <div class="sample-content">Main content moves and scales down when panel opens.</div>
+                <div class="sample-content">Creates a zoom-out effect while sliding.</div>
+            </div>
+            <div class="slider4-panel">
+                <h3>Scale Panel</h3>
+                <div class="panel-content">Panel slides in normally</div>
+                <div class="panel-content">Main content scales and moves</div>
+                <div class="panel-content">Unique visual effect</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggle1() {
+            document.getElementById('slider1').classList.toggle('open');
+        }
+        
+        function toggle2() {
+            document.getElementById('slider2').classList.toggle('open');
+        }
+        
+        function toggle3() {
+            document.getElementById('slider3').classList.toggle('open');
+        }
+        
+        function toggle4() {
+            document.getElementById('slider4').classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

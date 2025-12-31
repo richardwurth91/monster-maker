@@ -119,8 +119,21 @@
                     removeBtn.textContent = 'Remove Family';
                     removeBtn.onclick = () => removeFamily(monster.id);
                     
+                    const renameBtn = document.createElement('button');
+                    renameBtn.className = 'remove-btn';
+                    renameBtn.style.background = '#007bff';
+                    renameBtn.textContent = 'Rename';
+                    renameBtn.onclick = () => renameMonster(monster.id, monster.name);
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'remove-btn';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.onclick = () => deleteMonster(monster.id, monster.name);
+                    
                     assignedDiv.appendChild(familyIcon);
                     assignedDiv.appendChild(removeBtn);
+                    assignedDiv.appendChild(renameBtn);
+                    assignedDiv.appendChild(deleteBtn);
                     rightSection.appendChild(assignedDiv);
                 } else {
                     const icons = document.createElement('div');
@@ -135,7 +148,25 @@
                         icons.appendChild(icon);
                     });
                     
+                    const actionBtns = document.createElement('div');
+                    actionBtns.style.marginLeft = '10px';
+                    
+                    const renameBtn = document.createElement('button');
+                    renameBtn.className = 'remove-btn';
+                    renameBtn.style.background = '#007bff';
+                    renameBtn.textContent = 'Rename';
+                    renameBtn.onclick = () => renameMonster(monster.id, monster.name);
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'remove-btn';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.onclick = () => deleteMonster(monster.id, monster.name);
+                    
+                    actionBtns.appendChild(renameBtn);
+                    actionBtns.appendChild(deleteBtn);
+                    
                     rightSection.appendChild(icons);
+                    rightSection.appendChild(actionBtns);
                 }
                 
                 item.appendChild(sprite);
@@ -168,6 +199,29 @@
         async function clearAllFamilies() {
             if (confirm('Clear all family assignments?')) {
                 await fetch('/api/clear-families', { method: 'POST' });
+                loadUnassignedMonsters();
+            }
+        }
+
+        async function renameMonster(monsterId, currentName) {
+            const newName = prompt(`Rename monster "${currentName}" to:`, currentName);
+            if (newName && newName !== currentName) {
+                await fetch('/api/rename-monster', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ monsterId, newName })
+                });
+                loadUnassignedMonsters();
+            }
+        }
+
+        async function deleteMonster(monsterId, monsterName) {
+            if (confirm(`Delete monster "${monsterName}"? This cannot be undone.`)) {
+                await fetch('/api/delete-monster', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ monsterId })
+                });
                 loadUnassignedMonsters();
             }
         }

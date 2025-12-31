@@ -723,9 +723,9 @@ function updateAvailableParts() {
                     
                     // Handle click for adding parts
                     const addPartHandler = (e) => {
-                        // Add part to center of canvas
-                        const centerX = Math.floor((320 - 16) / 10) * 10;
-                        const centerY = Math.floor((320 - 16) / 10) * 10;
+                        // Add part to center of canvas (320 is half of 640)
+                        const centerX = 320;
+                        const centerY = 320;
                         addPartToWorkspace(croppedData, partName, centerX, centerY, monster.name);
                     };
                     

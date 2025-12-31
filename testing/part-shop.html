@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monster Part Shop</title>
+    <link rel="stylesheet" href="/RPGUI/rpgui.css">
+    <script src="/RPGUI/rpgui.js"></script>
+    <style>
+        body { background: #2a4d3a; }
+        .rpgui-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container .rpgui-container {
+            margin: 0 auto;
+        }
+        .sample-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .sample-item {
+            padding: 8px;
+            text-align: center;
+        }
+        .container {
+            position: relative;
+            overflow: hidden;
+            min-height: 600px;
+        }
+        .inventory-area {
+            position: absolute;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 100%;
+            padding: 20px;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+        }
+        .container.open .inventory-area {
+            right: 0;
+        }
+        .inventory-toggle {
+            position: absolute;
+            top: 20px;
+            right: 0;
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            z-index: 15;
+            width: 40px !important;
+            height: 60px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container.open .inventory-toggle {
+            right: 350px;
+        }
+        .inventory-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 2px solid #306230;
+            margin-bottom: 8px;
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #0f380f;
+        }
+        .inventory-item:hover {
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.4);
+        }
+        .part-icon {
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+            object-fit: contain;
+        }
+        .rarity-common { background: #6c757d; border-left: 4px solid #495057; color: #f0f0f0; }
+        .rarity-uncommon { background: #2d5016; color: #7fb069; border-left: 4px solid #7fb069; }
+        .rarity-rare { background: #1a237e; color: #64b5f6; border-left: 4px solid #64b5f6; }
+        .rarity-epic { background: #4a148c; color: #ba68c8; border-left: 4px solid #ba68c8; }
+        .rarity-legendary { background: #d4af37; color: #0f1f0f; border-left: 4px solid #f4d03f; }
+        .rarity-mythic { background: #b71c1c; color: #ffcdd2; border-left: 4px solid #ffcdd2; }
+        .part-preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 56, 15, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .part-preview-image {
+            width: 200px;
+            height: 200px;
+            image-rendering: pixelated;
+            object-fit: contain;
+            margin: 15px 0;
+        }
+        .monsters-area {
+            position: absolute;
+            top: 0;
+            left: -450px;
+            width: 450px;
+            height: 100%;
+            padding: 20px;
+            transition: left 0.3s ease;
+            overflow-y: auto;
+        }
+        .container.monsters-open .monsters-area {
+            left: 0;
+        }
+        .monsters-toggle {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            z-index: 15;
+            width: 40px !important;
+            height: 60px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container.monsters-open .monsters-toggle {
+            left: 450px;
+        }
+        .inventory-empty {
+            color: #0f380f;
+            font-style: italic;
+            text-align: center;
+            padding: 30px 15px;
+            background: #306230;
+            color: #9bbc0f;
+            border: 2px solid #0f380f;
+            font-family: 'Courier New', monospace;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border: 2px solid #0f380f;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            z-index: 3000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content">
+        <div class="container">
+            <div class="rpgui-container framed" style="position: relative;">
+                <h1>Monster Part Shop</h1>
+                <hr>
+                <p>GOLD: <span id="goldAmount">100</span>G</p>
+                
+                <div class="sample-grid">
+                    <div class="rpgui-container framed-grey sample-item">
+                        <p>RANDOM PART #1<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPart(1)"><p>BUY</p></button>
+                    </div>
+                    <div class="rpgui-container framed-grey sample-item">
+                        <p>RANDOM PART #2<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPart(2)"><p>BUY</p></button>
+                    </div>
+                    <div class="rpgui-container framed-grey sample-item">
+                        <p>RANDOM PART #3<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPart(3)"><p>BUY</p></button>
+                    </div>
+                </div>
+                
+                <hr>
+                <h2>Requests</h2>
+                <div id="requests-section">
+                    <p>Loading requests...</p>
+                </div>
+                
+                <button class="rpgui-button" onclick="toggleInventory()"><p>INVENTORY</p></button>
+                <button class="rpgui-button" onclick="toggleMonsters()"><p>YOUR MONSTERS</p></button>
+                <button class="rpgui-button" onclick="resetProgress()"><p>RESET</p></button>
+                <button class="rpgui-button" onclick="window.location.href='hatched-monster-maker.html'"><p>MAKER</p></button>
+            </div>
+            
+            <div class="monsters-area rpgui-container framed">
+                <h2>Your Monsters</h2>
+                <div id="monsters-section"></div>
+            </div>
+            <div class="monsters-toggle rpgui-container framed" onclick="toggleMonsters()"><p id="monsters-toggle-text">&gt;</p></div>
+            
+            <div class="inventory-area rpgui-container framed">
+                <h2>Part Inventory</h2>
+                <div id="inventory"></div>
+            </div>
+            <div class="inventory-toggle rpgui-container framed" onclick="toggleInventory()"><p id="toggle-text">&lt;</p></div>
+        </div>
+    </div>
+
+    <!-- Part Preview Modal -->
+    <div id="part-preview-modal" class="part-preview-modal" onclick="closePartPreview()">
+        <div class="rpgui-content">
+            <div class="rpgui-container framed" onclick="event.stopPropagation()" style="max-width: 400px; text-align: center; margin: 0 auto; position: relative;">
+                <h1 id="preview-part-name">Part Name</h1>
+                <img id="preview-part-image" class="part-preview-image" src="" alt="Part Preview">
+                <p><strong>From:</strong> <span id="preview-part-monster">Monster Name</span></p>
+                <p><strong>Rarity:</strong> <span id="preview-part-rarity">Common</span></p>
+                <button class="rpgui-button" onclick="closePartPreview()"><p>Close</p></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monster Preview Modal -->
+    <div id="monster-preview-modal" class="part-preview-modal" onclick="closeMonsterPreview()">
+        <div class="rpgui-content">
+            <div class="rpgui-container framed" onclick="event.stopPropagation()" style="max-width: 400px; text-align: center; margin: 0 auto; position: relative;">
+                <h1 id="preview-monster-name">Monster Name</h1>
+                <img id="preview-monster-image" class="part-preview-image" src="" alt="Monster Preview">
+                <p><strong>Base Value:</strong> <span id="preview-monster-value">0</span>G</p>
+                <p><strong>Parts Used:</strong></p>
+                <div id="preview-monster-parts" style="font-size: 12px; text-align: left; margin: 10px 0; max-height: 150px; overflow-y: auto;"></div>
+                <button class="rpgui-button" onclick="closeMonsterPreview()"><p>Close</p></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gold = parseInt(localStorage.getItem('gold')) || 100;
+        const partPrice = 10;
+        let parts = [];
+        let inventory = JSON.parse(localStorage.getItem('partInventory')) || [];
+
+        async function loadParts() {
+            try {
+                const response = await fetch('/api/monsters');
+                const monsters = await response.json();
+                
+                parts = [];
+                for (const monster of monsters) {
+                    if (monster.parts) {
+                        const monsterParts = JSON.parse(monster.parts);
+                        Object.keys(monsterParts).forEach(partName => {
+                            parts.push({
+                                name: partName,
+                                monster: monster.name,
+                                family: monster.family,
+                                rarity: monster.rarity || 1,
+                                sprite: monsterParts[partName]
+                            });
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load parts:', error);
+                parts = [];
+            }
+        }
+
+        function autoCropImage(imageData) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const pixels = data.data;
+                    
+                    let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                    
+                    for (let y = 0; y < canvas.height; y++) {
+                        for (let x = 0; x < canvas.width; x++) {
+                            const alpha = pixels[(y * canvas.width + x) * 4 + 3];
+                            if (alpha > 0) {
+                                minX = Math.min(minX, x);
+                                minY = Math.min(minY, y);
+                                maxX = Math.max(maxX, x);
+                                maxY = Math.max(maxY, y);
+                            }
+                        }
+                    }
+                    
+                    if (minX < canvas.width) {
+                        const cropWidth = maxX - minX + 1;
+                        const cropHeight = maxY - minY + 1;
+                        
+                        const cropCanvas = document.createElement('canvas');
+                        const cropCtx = cropCanvas.getContext('2d');
+                        cropCanvas.width = cropWidth;
+                        cropCanvas.height = cropHeight;
+                        
+                        cropCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+                        resolve(cropCanvas.toDataURL());
+                    } else {
+                        resolve(imageData);
+                    }
+                };
+                img.src = imageData;
+            });
+        }
+
+        function getRarity(rarity) {
+            const numRarity = parseFloat(rarity) || 1;
+            if (numRarity >= 4) return { name: 'Mythic', class: 'rarity-mythic' };
+            if (numRarity >= 3) return { name: 'Legendary', class: 'rarity-legendary' };
+            if (numRarity >= 2.5) return { name: 'Epic', class: 'rarity-epic' };
+            if (numRarity >= 2) return { name: 'Rare', class: 'rarity-rare' };
+            if (numRarity >= 1.5) return { name: 'Uncommon', class: 'rarity-uncommon' };
+            return { name: 'Common', class: 'rarity-common' };
+        }
+
+        async function updateInventory() {
+            const inventoryDiv = document.getElementById('inventory');
+            if (inventory.length === 0) {
+                inventoryDiv.innerHTML = '<div class="inventory-empty">No parts yet<br><small>Buy some parts to get started!</small></div>';
+                return;
+            }
+            
+            const inventoryItems = await Promise.all(
+                inventory.map(async (part, index) => {
+                    const rarityInfo = getRarity(part.rarity);
+                    const croppedSprite = await autoCropImage(part.sprite);
+                    return `<div class="inventory-item ${rarityInfo.class}" onclick="showPartPreview(${index})">
+                        <img src="${croppedSprite}" class="part-icon" alt="${part.name}">
+                        <div>
+                            <div style="font-weight: 600;">${part.name}</div>
+                            <div style="font-size: 12px;">from ${part.monster}</div>
+                            <div style="font-size: 12px; font-weight: 600;">${rarityInfo.name}</div>
+                        </div>
+                    </div>`;
+                })
+            );
+            
+            inventoryDiv.innerHTML = inventoryItems.join('');
+        }
+
+        function updateGold() {
+            document.getElementById('goldAmount').textContent = gold;
+            localStorage.setItem('gold', gold);
+        }
+
+        function showToast(message, rarity = null) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            
+            if (rarity) {
+                const rarityInfo = getRarity(rarity);
+                toast.classList.add(rarityInfo.class);
+            } else {
+                toast.style.background = '#306230';
+                toast.style.color = '#9bbc0f';
+            }
+            
+            const existingToasts = document.querySelectorAll('.toast');
+            existingToasts.forEach((t, i) => {
+                t.style.top = `${20 + (i + 1) * 60}px`;
+            });
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) document.body.removeChild(toast);
+                    const remainingToasts = document.querySelectorAll('.toast');
+                    remainingToasts.forEach((t, i) => {
+                        t.style.top = `${20 + i * 60}px`;
+                    });
+                }, 300);
+            }, 3000);
+        }
+
+        function getRarityByChance() {
+            const rand = Math.random() * 100;
+            if (rand < 1) return 4; // Mythic - 1%
+            if (rand < 6) return 3; // Legendary - 5%
+            if (rand < 16) return 2.5; // Epic - 10%
+            if (rand < 33) return 2; // Rare - 17%
+            if (rand < 60) return 1.5; // Uncommon - 27%
+            return 1; // Common - 40%
+        }
+
+        function buyPart(partNum) {
+            if (gold < partPrice || parts.length === 0) {
+                showToast('Not enough gold!');
+                return;
+            }
+            
+            gold -= partPrice;
+            
+            // Get rarity based on chances
+            const targetRarity = getRarityByChance();
+            
+            // Filter parts by rarity range
+            const eligibleParts = parts.filter(part => {
+                const partRarity = parseFloat(part.rarity) || 1;
+                return Math.abs(partRarity - targetRarity) < 0.5;
+            });
+            
+            // If no parts match exact rarity, fall back to all parts
+            const availableParts = eligibleParts.length > 0 ? eligibleParts : parts;
+            const randomPart = availableParts[Math.floor(Math.random() * availableParts.length)];
+            
+            inventory.push(randomPart);
+            
+            localStorage.setItem('partInventory', JSON.stringify(inventory));
+            
+            showToast(`You got: ${randomPart.name} from ${randomPart.monster}!`, randomPart.rarity);
+            
+            updateGold();
+            updateInventory();
+        }
+
+        function toggleInventory() {
+            const container = document.querySelector('.container');
+            const toggleText = document.getElementById('toggle-text');
+            container.classList.toggle('open');
+            toggleText.textContent = container.classList.contains('open') ? '>' : '<';
+        }
+
+        function toggleMonsters() {
+            const container = document.querySelector('.container');
+            const toggleText = document.getElementById('monsters-toggle-text');
+            container.classList.toggle('monsters-open');
+            toggleText.textContent = container.classList.contains('monsters-open') ? '<' : '>';
+        }
+
+        function resetProgress() {
+            if (confirm('Reset all progress?')) {
+                localStorage.removeItem('gold');
+                localStorage.removeItem('partInventory');
+                localStorage.removeItem('activeRequests');
+                gold = 100;
+                inventory = [];
+                updateGold();
+                updateInventory();
+                document.getElementById('requests-section').innerHTML = '<p>No active requests</p>';
+                alert('Progress reset!');
+            }
+        }
+
+        async function showPartPreview(partIndex) {
+            const part = inventory[partIndex];
+            const rarityInfo = getRarity(part.rarity);
+            const croppedSprite = await autoCropImage(part.sprite);
+            
+            document.getElementById('preview-part-name').textContent = part.name;
+            document.getElementById('preview-part-image').src = croppedSprite;
+            document.getElementById('preview-part-monster').textContent = part.monster;
+            document.getElementById('preview-part-rarity').textContent = rarityInfo.name;
+            document.getElementById('part-preview-modal').style.display = 'flex';
+        }
+
+        function closePartPreview() {
+            document.getElementById('part-preview-modal').style.display = 'none';
+        }
+
+        async function loadCreatedMonsters() {
+            try {
+                const response = await fetch('/api/creations?source=part-maker');
+                const creations = await response.json();
+                const userName = localStorage.getItem('userName');
+                
+                const userMonsters = creations.filter(creation => creation.author === userName);
+                
+                const monstersDiv = document.getElementById('monsters-section');
+                if (userMonsters.length === 0) {
+                    monstersDiv.innerHTML = '<p>No monsters created yet</p>';
+                } else {
+                    const monsterElements = await Promise.all(
+                        userMonsters.map(async (monster, index) => {
+                            let monsterDisplay;
+                            if (monster.creation_data) {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = 64;
+                                canvas.height = 64;
+                                const ctx = canvas.getContext('2d');
+                                ctx.imageSmoothingEnabled = false;
+                                await renderCreationData(monster.creation_data, ctx, 64, 64);
+                                const dataURL = canvas.toDataURL();
+                                monsterDisplay = `<img src="${dataURL}" style="width: 64px; height: 64px; image-rendering: pixelated;">`;
+                            } else {
+                                const croppedSprite = await autoCropImage(monster.sprite);
+                                monsterDisplay = `<img src="${croppedSprite}" style="width: 64px; height: 64px; image-rendering: pixelated;">`;
+                            }
+                            
+                            return `<div style="display: inline-block; margin: 5px; text-align: center; width: 120px; cursor: url('/RPGUI/img/cursor/point.png'), pointer;" onclick="showMonsterPreview(${index})">
+                                ${monsterDisplay}
+                                <p>${monster.name}</p>
+                            </div>`;
+                        })
+                    );
+                    monstersDiv.innerHTML = monsterElements.join('');
+                }
+            } catch (error) {
+                console.error('Error loading monsters:', error);
+            }
+        }
+
+        async function renderCreationData(creationDataStr, ctx, canvasWidth, canvasHeight) {
+            const data = JSON.parse(creationDataStr);
+            
+            if (!data.placedParts || data.placedParts.length === 0) {
+                return;
+            }
+            
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            
+            data.placedParts.forEach(part => {
+                minX = Math.min(minX, part.x);
+                minY = Math.min(minY, part.y);
+                maxX = Math.max(maxX, part.x + part.width);
+                maxY = Math.max(maxY, part.y + part.height);
+            });
+            
+            const contentWidth = maxX - minX;
+            const contentHeight = maxY - minY;
+            const scale = Math.min(canvasWidth / contentWidth, canvasHeight / contentHeight);
+            
+            const offsetX = (canvasWidth - contentWidth * scale) / 2;
+            const offsetY = (canvasHeight - contentHeight * scale) / 2;
+            
+            for (const part of data.placedParts) {
+                const img = new Image();
+                await new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                    img.src = part.dataUrl;
+                });
+                
+                ctx.save();
+                
+                const scaledX = (part.x - minX) * scale + offsetX;
+                const scaledY = (part.y - minY) * scale + offsetY;
+                const scaledWidth = part.width * scale;
+                const scaledHeight = part.height * scale;
+                
+                const centerX = scaledX + scaledWidth / 2;
+                const centerY = scaledY + scaledHeight / 2;
+                
+                ctx.translate(centerX, centerY);
+                
+                if (part.flipHorizontal || part.flipVertical) {
+                    ctx.scale(
+                        part.flipHorizontal ? -1 : 1,
+                        part.flipVertical ? -1 : 1
+                    );
+                }
+                
+                if (part.rotation) {
+                    ctx.rotate(part.rotation * Math.PI / 180);
+                }
+                
+                ctx.drawImage(img, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+                ctx.restore();
+            }
+        }
+        async function showMonsterPreview(monsterIndex) {
+            const response = await fetch('/api/creations?source=part-maker');
+            const creations = await response.json();
+            const userName = localStorage.getItem('userName');
+            const userMonsters = creations.filter(creation => creation.author === userName);
+            const monster = userMonsters[monsterIndex];
+            
+            let monsterDisplay;
+            if (monster.creation_data) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                await renderCreationData(monster.creation_data, ctx, 200, 200);
+                const dataURL = canvas.toDataURL();
+                monsterDisplay = dataURL;
+            } else {
+                monsterDisplay = await autoCropImage(monster.sprite);
+            }
+            
+            // Calculate monster value and get parts info
+            let totalValue = 0;
+            let partsInfo = [];
+            
+            if (monster.creation_data) {
+                const data = JSON.parse(monster.creation_data);
+                if (data.placedParts) {
+                    const partCounts = {};
+                    data.placedParts.forEach(part => {
+                        const partKey = `${part.name} (${part.monster})`;
+                        partCounts[partKey] = (partCounts[partKey] || 0) + 1;
+                        
+                        // Find part rarity for value calculation
+                        const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                        if (partData) {
+                            totalValue += Math.floor(partData.rarity * 10);
+                        }
+                    });
+                    
+                    partsInfo = await Promise.all(
+                        Object.entries(partCounts).map(async ([partKey, count]) => {
+                            const [partName, monsterName] = partKey.split(' (');
+                            const cleanMonsterName = monsterName.replace(')', '');
+                            const partData = parts.find(p => p.name === partName && p.monster === cleanMonsterName);
+                            const rarityInfo = partData ? getRarity(partData.rarity) : { name: 'Common', class: 'rarity-common' };
+                            const croppedSprite = partData ? await autoCropImage(partData.sprite) : '';
+                            return `<div class="inventory-item ${rarityInfo.class}" style="height: 30px; padding: 5px; margin-bottom: 4px;">
+                                <img src="${croppedSprite}" class="part-icon" style="width: 20px; height: 20px;" alt="${partName}">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 11px;">${count}x ${partName}</div>
+                                    <div style="font-size: 10px;">from ${cleanMonsterName} - ${rarityInfo.name}</div>
+                                </div>
+                            </div>`;
+                        })
+                    );
+                }
+            }
+            
+            document.getElementById('preview-monster-name').textContent = monster.name;
+            document.getElementById('preview-monster-image').src = monsterDisplay;
+            document.getElementById('preview-monster-value').textContent = totalValue;
+            document.getElementById('preview-monster-parts').innerHTML = partsInfo.length > 0 ? partsInfo.join('') : 'No parts data available';
+            document.getElementById('monster-preview-modal').style.display = 'flex';
+        }
+
+        function generateRandomRequest() {
+            const partTypes = ['Head', 'Body', 'Wing', 'Tail', 'Leg', 'Arm', 'Eye', 'Horn'];
+            const families = ['Bird', 'Beast', 'Dragon', 'Aquatic', 'Insect', 'Plant', 'Undead', 'Elemental'];
+            const quantities = [2, 3, 4, 5];
+            const rewards = [1.3, 1.5, 1.7, 2.0];
+            
+            const partType = partTypes[Math.floor(Math.random() * partTypes.length)];
+            const quantity = quantities[Math.floor(Math.random() * quantities.length)];
+            const reward = rewards[Math.floor(Math.random() * rewards.length)];
+            
+            if (Math.random() < 0.5) {
+                const family = families[Math.floor(Math.random() * families.length)];
+                return {
+                    description: `Need ${quantity}x ${partType} parts from ${family} family monsters`,
+                    reward: reward,
+                    checkFunction: (monster) => {
+                        if (!monster.creation_data) return false;
+                        const data = JSON.parse(monster.creation_data);
+                        if (!data.placedParts) return false;
+                        return data.placedParts.filter(part => {
+                            const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                            return partData && partData.family === family && part.name.toLowerCase().includes(partType.toLowerCase());
+                        }).length >= quantity;
+                    }
+                };
+            } else {
+                return {
+                    description: `Need ${quantity}x ${partType} parts from any monster`,
+                    reward: reward,
+                    checkFunction: (monster) => {
+                        if (!monster.creation_data) return false;
+                        const data = JSON.parse(monster.creation_data);
+                        if (!data.placedParts) return false;
+                        return data.placedParts.filter(part => 
+                            part.name.toLowerCase().includes(partType.toLowerCase())
+                        ).length >= quantity;
+                    }
+                };
+            }
+        }
+
+        function loadRequests() {
+            const stored = localStorage.getItem('currentRequests');
+            if (stored) {
+                const requests = JSON.parse(stored);
+                return requests.map(req => ({
+                    ...req,
+                    checkFunction: generateCheckFunction(req.description, req.reward)
+                }));
+            }
+            return [generateRandomRequest(), generateRandomRequest()];
+        }
+
+        function generateCheckFunction(description, reward) {
+            const match = description.match(/Need (\d+)x (\w+) parts from (\w+) family monsters|Need (\d+)x (\w+) parts from any monster/);
+            if (match) {
+                if (match[3]) { // family specific
+                    const quantity = parseInt(match[1]);
+                    const partType = match[2];
+                    const family = match[3];
+                    return (monster) => {
+                        if (!monster.creation_data) return false;
+                        const data = JSON.parse(monster.creation_data);
+                        if (!data.placedParts) return false;
+                        return data.placedParts.filter(part => {
+                            const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                            return partData && partData.family === family && part.name.toLowerCase().includes(partType.toLowerCase());
+                        }).length >= quantity;
+                    };
+                } else { // any monster
+                    const quantity = parseInt(match[4]);
+                    const partType = match[5];
+                    return (monster) => {
+                        if (!monster.creation_data) return false;
+                        const data = JSON.parse(monster.creation_data);
+                        if (!data.placedParts) return false;
+                        return data.placedParts.filter(part => 
+                            part.name.toLowerCase().includes(partType.toLowerCase())
+                        ).length >= quantity;
+                    };
+                }
+            }
+            return () => false;
+        }
+
+        let currentRequests = loadRequests();
+
+        function refreshRequest(requestIndex) {
+            const newRequest = generateRandomRequest();
+            currentRequests[requestIndex] = newRequest;
+            localStorage.setItem('currentRequests', JSON.stringify(currentRequests.map(r => ({description: r.description, reward: r.reward}))));
+            currentRequests = loadRequests();
+            updateRequests();
+        }
+
+        async function updateRequests() {
+            const response = await fetch('/api/creations?source=part-maker');
+            const creations = await response.json();
+            const userName = localStorage.getItem('userName');
+            const userMonsters = creations.filter(creation => creation.author === userName);
+            
+            let requestsHtml = '';
+            
+            for (let i = 0; i < currentRequests.length; i++) {
+                const request = currentRequests[i];
+                let requestHtml = `<div class="rpgui-container framed-grey" style="margin: 10px 0; padding: 15px; position: relative;">
+                    <div class="rpgui-container framed" onclick="refreshRequest(${i})" style="cursor: url('/RPGUI/img/cursor/point.png'), pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; position: absolute; top: 10px; right: 10px;"><p>↻</p></div>
+                    <p><strong>Request #${i + 1}:</strong> ${request.description}</p>
+                    <p><strong>Reward:</strong> ${request.reward}x Base Value</p>
+`;
+                
+                let hasEligible = false;
+                
+                for (const monster of userMonsters) {
+                    if (request.checkFunction(monster)) {
+                        hasEligible = true;
+                        const baseValue = calculateMonsterValue(monster);
+                        const sellValue = Math.floor(baseValue * request.reward);
+                        requestHtml += `<div style="display: inline-block; margin: 10px; text-align: center;">
+                            <img src="${await getMonsterImage(monster)}" style="width: 64px; height: 64px; image-rendering: pixelated;">
+                            <p>${monster.name}</p>
+                            <button class="rpgui-button" onclick="sellMonster('${monster.id}', ${sellValue})"><p>SELL ${sellValue}G</p></button>
+                        </div>`;
+                    }
+                }
+                
+                if (!hasEligible) {
+                    requestHtml += '<p style="color: red; margin-top: 5px;">No eligible monsters</p>';
+                }
+                
+                requestHtml += '</div>';
+                requestsHtml += requestHtml;
+            }
+            
+            document.getElementById('requests-section').innerHTML = requestsHtml;
+            
+
+        }
+        
+        function calculateMonsterValue(monster) {
+            let totalValue = 0;
+            if (monster.creation_data) {
+                const data = JSON.parse(monster.creation_data);
+                if (data.placedParts) {
+                    data.placedParts.forEach(part => {
+                        const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                        if (partData) {
+                            totalValue += Math.floor(partData.rarity * 10);
+                        }
+                    });
+                }
+            }
+            return totalValue;
+        }
+        
+        async function getMonsterImage(monster) {
+            if (monster.creation_data) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                await renderCreationData(monster.creation_data, ctx, 64, 64);
+                return canvas.toDataURL();
+            } else {
+                return await autoCropImage(monster.sprite);
+            }
+        }
+        
+        async function sellMonster(monsterId, sellValue) {
+            if (confirm(`Sell this monster for ${sellValue}G?`)) {
+                try {
+                    const response = await fetch(`/api/creations/${monsterId}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        gold += sellValue;
+                        updateGold();
+                        updateRequests();
+                        loadCreatedMonsters();
+                        alert(`Monster sold for ${sellValue}G!`);
+                    }
+                } catch (error) {
+                    console.error('Error selling monster:', error);
+                }
+            }
+        }
+
+        function closeMonsterPreview() {
+            document.getElementById('monster-preview-modal').style.display = 'none';
+        }
+        // Initialize
+        loadParts().then(() => {
+            updateGold();
+            updateInventory();
+            loadCreatedMonsters();
+            updateRequests();
+        });
+    </script>
+</body>
+</html>

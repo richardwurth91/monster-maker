@@ -3516,7 +3516,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           </skills>
           <growth agl="23" int="23" maxlvl="60" atk="26" mp="30" exp="28" hp="21" def="24"/>
         </monster>
-        <monster name="Orgodemir2" in_story="false">
+        <monster name="Orgodemir (Transformed)" in_story="false">
           <skills>
             <skill>MegaMagic</skill>
             <skill>DeMagic</skill>
