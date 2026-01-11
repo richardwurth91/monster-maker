@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster Image Analyzer</title>
+    <link rel="stylesheet" href="/RPGUI/rpgui.css">
+    <script src="/RPGUI/rpgui.js"></script>
+    <style>
+        body { background: #2a4d3a; margin: 0; padding: 20px; }
+        .rpgui-container { margin: 20px auto; max-width: 800px; }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            background: #f9f9f9;
+        }
+        .upload-area.dragover {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .monster-result {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 5px;
+            gap: 15px;
+        }
+        .monster-image {
+            width: 100px;
+            height: 80px;
+            object-fit: contain;
+            border: 1px solid #ddd;
+        }
+        .monster-info {
+            flex: 1;
+        }
+        .rarity-stars {
+            display: flex;
+            gap: 2px;
+        }
+        .star {
+            width: 16px;
+            height: 16px;
+            background: #ddd;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+        }
+        .star.filled { background: #ffd700; }
+        .star.half { background: linear-gradient(90deg, #ffd700 50%, #ddd 50%); }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content">
+        <div class="rpgui-container framed">
+            <h1>Monster Image Analyzer</h1>
+            <p>Upload Game Boy Color monster info screen images to extract names and determine rarity.</p>
+            
+            <div class="upload-area" id="uploadArea">
+                <p>Drag and drop images here or click to select files</p>
+                <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+                <button class="rpgui-button" onclick="document.getElementById('fileInput').click()">
+                    <p>Select Images</p>
+                </button>
+            </div>
+            
+            <div class="results" id="results"></div>
+            
+            <div class="rpgui-container framed" id="sqlOutput" style="display: none;">
+                <h3>Database Update SQL</h3>
+                <textarea id="sqlText" style="width: 100%; height: 200px; font-family: monospace;"></textarea>
+                <button class="rpgui-button" onclick="copySql()">
+                    <p>Copy SQL</p>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const results = document.getElementById('results');
+        const sqlOutput = document.getElementById('sqlOutput');
+        const sqlText = document.getElementById('sqlText');
+        
+        let analyzedMonsters = [];
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            processFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            processFiles(files);
+        });
+
+        function processFiles(files) {
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    analyzeImage(file);
+                }
+            });
+        }
+
+        function analyzeImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const result = extractMonsterData(img, file.name);
+                    displayResult(result, e.target.result);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function extractMonsterData(img, filename) {
+            // Create canvas for image analysis
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            // Extract name (simplified - would need OCR in real implementation)
+            const name = extractNameFromFilename(filename);
+            
+            // Analyze star colors
+            const rarity = analyzeStarArea(ctx, img.width, img.height);
+
+            return {
+                name: name,
+                rarity: rarity,
+                filename: filename
+            };
+        }
+
+        function extractNameFromFilename(filename) {
+            // Remove extension and clean up filename
+            return filename.replace(/\.(png|jpg|jpeg|gif)$/i, '').replace(/[^a-zA-Z0-9]/g, '');
+        }
+
+        function analyzeStarArea(ctx, width, height) {
+            // Get pixel data from star area (approximate coordinates)
+            const starX = Math.floor(width * 0.15);
+            const starY = Math.floor(height * 0.55);
+            const starWidth = Math.floor(width * 0.6);
+            const starHeight = Math.floor(height * 0.15);
+            
+            const imageData = ctx.getImageData(starX, starY, starWidth, starHeight);
+            const pixels = imageData.data;
+            
+            let colorCounts = {
+                grey: 0,
+                green: 0,
+                blue: 0,
+                purple: 0,
+                gold: 0,
+                red: 0
+            };
+            
+            // Analyze pixels
+            for (let i = 0; i < pixels.length; i += 4) {
+                const r = pixels[i];
+                const g = pixels[i + 1];
+                const b = pixels[i + 2];
+                
+                // Classify pixel color
+                if (r > 200 && g > 200 && b < 100) {
+                    colorCounts.gold++;
+                } else if (r > 150 && g < 100 && b < 100) {
+                    colorCounts.red++;
+                } else if (r < 100 && g > 150 && b < 100) {
+                    colorCounts.green++;
+                } else if (r < 100 && g < 100 && b > 150) {
+                    colorCounts.blue++;
+                } else if (r > 100 && g < 100 && b > 150) {
+                    colorCounts.purple++;
+                } else if (r > 100 && r < 160 && g > 100 && g < 160 && b > 100 && b < 160) {
+                    colorCounts.grey++;
+                }
+            }
+            
+            // Determine dominant color
+            const dominantColor = Object.keys(colorCounts).reduce((a, b) => 
+                colorCounts[a] > colorCounts[b] ? a : b
+            );
+            
+            // Map to rarity
+            const rarityMap = {
+                grey: 1.0,
+                green: 1.5,
+                blue: 2.0,
+                purple: 2.5,
+                gold: 3.0,
+                red: 4.0
+            };
+            
+            return rarityMap[dominantColor] || 1.0;
+        }
+
+        function displayResult(result, imageSrc) {
+            analyzedMonsters.push(result);
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'monster-result';
+            
+            resultDiv.innerHTML = `
+                <img src="${imageSrc}" alt="${result.name}" class="monster-image">
+                <div class="monster-info">
+                    <h4>${result.name}</h4>
+                    <div>Rarity: ${result.rarity} stars</div>
+                    <div class="rarity-stars">${generateStars(result.rarity)}</div>
+                </div>
+            `;
+            
+            results.appendChild(resultDiv);
+            updateSqlOutput();
+        }
+
+        function generateStars(rarity) {
+            let stars = '';
+            const fullStars = Math.floor(rarity);
+            const hasHalf = rarity % 1 !== 0;
+            
+            for (let i = 0; i < fullStars; i++) {
+                stars += '<div class="star filled"></div>';
+            }
+            
+            if (hasHalf) {
+                stars += '<div class="star half"></div>';
+            }
+            
+            // Fill remaining with empty stars up to 4
+            const remaining = 4 - Math.ceil(rarity);
+            for (let i = 0; i < remaining; i++) {
+                stars += '<div class="star"></div>';
+            }
+            
+            return stars;
+        }
+
+        function updateSqlOutput() {
+            if (analyzedMonsters.length > 0) {
+                const sql = analyzedMonsters.map(monster => 
+                    `UPDATE monsters SET rarity = ${monster.rarity} WHERE name = '${monster.name}';`
+                ).join('\n');
+                
+                sqlText.value = sql;
+                sqlOutput.style.display = 'block';
+            }
+        }
+
+        function copySql() {
+            sqlText.select();
+            document.execCommand('copy');
+            alert('SQL copied to clipboard!');
+        }
+    </script>
+</body>
+</html>

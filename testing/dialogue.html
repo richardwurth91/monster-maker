@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dialogue Test</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 50px;
+            background: #2a4d3a;
+            color: white;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0);
+            z-index: 1000;
+        }
+        
+        .spotlight {
+            position: absolute;
+            background: transparent;
+            border-radius: 50%;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0);
+            z-index: 1001;
+        }
+        
+        .modal-content {
+            position: absolute;
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            width: 360px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            line-height: 1.8;
+        }
+        
+        .tutorial-element.highlighted {
+            box-shadow: 0 0 20px #ffff00;
+            border-color: #ffff00;
+        }
+        
+        .old-man-gif {
+            image-rendering: pixelated;
+            margin-bottom: 20px;
+            object-fit: contain;
+        }
+        
+        .dialogue-text {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        
+        .tutorial-element {
+            position: absolute;
+            padding: 10px;
+            background: #444;
+            border: 2px solid #666;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <button onclick="showDialogue()">Test Dialogue</button>
+    
+    <div class="tutorial-element" id="canvas-area" onclick="showTutorial('canvas', this)">Canvas Area</div>
+    <div class="tutorial-element" id="part-inventory" onclick="showTutorial('inventory', this)">Part Inventory</div>
+    <div class="tutorial-element" id="color-palette" onclick="showTutorial('palette', this)">Color Palette</div>
+    <div class="tutorial-element" id="transform-tools" onclick="showTutorial('transform', this)">Transform Tools</div>
+    <div class="tutorial-element" id="save-button" onclick="showTutorial('save', this)">Save Button</div>
+    <div class="tutorial-element" id="reset-button" onclick="showTutorial('reset', this)">Reset Button</div>
+    <div class="tutorial-element" id="start-button" onclick="showTutorial('start', this)">Start</div>
+    <div class="tutorial-element" id="end-button" onclick="showTutorial('end', this)">End</div>
+    
+    <div id="dialogue-modal" class="modal" onclick="closeDialogue()">
+        <div id="spotlight" class="spotlight"></div>
+        <img class="old-man-gif" src="/assets/icons/misc/other/old_man_idle_animation.gif" style="position: absolute; image-rendering: pixelated; width: 100px; height: 100px; object-fit: contain; z-index: 1002; pointer-events: none;" alt="Old Man">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="dialogue-text" id="dialogue-content">
+                Greetings, young adventurer! Welcome to the world of monster making. 
+                Here you can create magnificent creatures by combining different parts!
+            </div>
+            <button id="close-btn" onclick="closeDialogue()">Close</button>
+            <button id="next-btn" onclick="nextStep()" style="display: none;">Next</button>
+        </div>
+    </div>
+    
+    <script>
+        function autoCropGif(imgElement) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = imgElement.naturalWidth;
+            canvas.height = imgElement.naturalHeight;
+            ctx.drawImage(imgElement, 0, 0);
+            
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = data.data;
+            
+            let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+            
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const alpha = pixels[(y * canvas.width + x) * 4 + 3];
+                    if (alpha > 0) {
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x);
+                        maxY = Math.max(maxY, y);
+                    }
+                }
+            }
+            
+            if (minX < canvas.width) {
+                const cropWidth = (maxX - minX + 1) * 10;
+                const cropHeight = (maxY - minY + 1) * 10;
+                imgElement.style.width = cropWidth + 'px';
+                imgElement.style.height = cropHeight + 'px';
+            }
+        }
+        
+        function showDialogue() {
+            const oldManImg = document.querySelector('.old-man-gif');
+            oldManImg.src = '/assets/icons/misc/other/old_man_idle_animation.gif';
+            oldManImg.style.transform = 'none';
+            oldManImg.style.display = 'none';
+            
+            document.getElementById('dialogue-modal').style.display = 'block';
+        }
+        
+        function showTutorial(type, element) {
+            const dialogues = {
+                canvas: "This is the Canvas Area! Here you can drag and drop monster parts to create your creature. Use the grid to position parts precisely.",
+                inventory: "The Part Inventory contains all the parts you've collected. Click on parts to add them to your canvas and start building!",
+                palette: "The Color Palette lets you customize the colors of your monster parts. Unlock this feature to make truly unique creations!",
+                transform: "Transform Tools allow you to rotate, flip, and scale your monster parts. Perfect for getting the exact look you want!",
+                save: "The Save Button lets you preserve your creation and add it to your monster collection. Don't forget to give it a name!",
+                reset: "The Reset Button clears your canvas so you can start fresh. Use this when you want to begin a new creation!",
+                start: "Welcome to the tutorial! This will guide you through the monster maker interface. Click Next to continue.",
+                end: "Congratulations! You've completed the tutorial. Now you're ready to create amazing monsters!"
+            };
+            
+            // Clear previous highlights
+            document.querySelectorAll('.tutorial-element').forEach(el => el.classList.remove('highlighted'));
+            
+            // Highlight clicked element
+            element.classList.add('highlighted');
+            
+            // Show/hide appropriate buttons
+            if (type === 'start') {
+                document.getElementById('close-btn').style.display = 'none';
+                document.getElementById('next-btn').style.display = 'inline-block';
+            } else {
+                document.getElementById('close-btn').style.display = 'inline-block';
+                document.getElementById('next-btn').style.display = 'none';
+            }
+            
+            positionModal(element);
+            document.getElementById('dialogue-content').textContent = dialogues[type];
+            showDialogue();
+        }
+        
+        function closeDialogue() {
+            document.getElementById('dialogue-modal').style.display = 'none';
+            // Remove highlights when closing
+            document.querySelectorAll('.tutorial-element').forEach(el => el.classList.remove('highlighted'));
+        }
+        
+        // Position tutorial elements randomly
+        function positionElements() {
+            const elements = document.querySelectorAll('.tutorial-element');
+            elements.forEach(element => {
+                const x = Math.random() * (window.innerWidth - 200);
+                const y = Math.random() * (window.innerHeight - 100);
+                element.style.left = x + 'px';
+                element.style.top = y + 'px';
+            });
+        }
+        
+        function positionModal(element) {
+            const rect = element.getBoundingClientRect();
+            const modal = document.querySelector('.modal-content');
+            const spotlight = document.getElementById('spotlight');
+            const oldManImg = document.querySelector('.old-man-gif');
+            
+            // Create spotlight around the element
+            const spotlightSize = Math.max(rect.width, rect.height) + 60;
+            const spotlightX = rect.left + rect.width / 2 - spotlightSize / 2;
+            const spotlightY = rect.top + rect.height / 2 - spotlightSize / 2;
+            
+            spotlight.style.left = spotlightX + 'px';
+            spotlight.style.top = spotlightY + 'px';
+            spotlight.style.width = spotlightSize + 'px';
+            spotlight.style.height = spotlightSize + 'px';
+            spotlight.style.display = 'block';
+            
+            let left = rect.right + 20;
+            let top = rect.top;
+            
+            // Adjust if modal would go off screen
+            const modalWidth = 380; // 360px + padding
+            const modalHeight = 300; // estimated height
+            
+            // Ensure modal stays within viewport bounds
+            left = Math.max(10, Math.min(left, window.innerWidth - modalWidth - 10));
+            top = Math.max(10, Math.min(top, window.innerHeight - modalHeight - 10));
+            
+            modal.style.left = left + 'px';
+            modal.style.top = top + 'px';
+            
+            // Position old man to point at the target element
+            oldManImg.src = '/assets/icons/misc/other/old_man_pointing_animation.gif';
+            
+            const targetCenterX = rect.left + rect.width / 2;
+            const targetCenterY = rect.top + rect.height / 2;
+            const modalCenterX = left + modalWidth / 2;
+            
+            // Determine if target is to the left or right of modal
+            const isTargetLeft = targetCenterX < modalCenterX;
+            
+            // Mirror the image if pointing left
+            if (isTargetLeft) {
+                oldManImg.style.transform = 'scaleX(-1)';
+            } else {
+                oldManImg.style.transform = 'scaleX(1)';
+            }
+            
+            // Position old man anywhere on screen, closer to target
+            const oldManSize = 100;
+            let oldManX, oldManY;
+            
+            // Position old man on same side as modal relative to target
+            const isModalRight = left > targetCenterX;
+            
+            if (isModalRight) {
+                // Modal is to the right, put old man to the right too
+                oldManX = Math.min(window.innerWidth - oldManSize, targetCenterX + rect.width / 2 + 50);
+            } else {
+                // Modal is to the left, put old man to the left too
+                oldManX = Math.max(0, targetCenterX - rect.width / 2 - oldManSize - 50);
+            }
+            
+            // Adjust modal position to avoid overlap with old man
+            if (isModalRight && left < oldManX + oldManSize + 20) {
+                left = oldManX + oldManSize + 20;
+            } else if (!isModalRight && left + modalWidth > oldManX - 20) {
+                left = oldManX - modalWidth - 20;
+            }
+            
+            modal.style.left = left + 'px';
+            modal.style.top = top + 'px';
+            
+            oldManY = Math.max(0, Math.min(targetCenterY - oldManSize / 2, window.innerHeight - oldManSize));
+            
+            oldManImg.style.left = oldManX + 'px';
+            oldManImg.style.top = oldManY + 'px';
+            oldManImg.style.display = 'block';
+        }
+        
+        function nextStep() {
+            const endButton = document.getElementById('end-button');
+            document.querySelectorAll('.tutorial-element').forEach(el => el.classList.remove('highlighted'));
+            endButton.classList.add('highlighted');
+            positionModal(endButton);
+            document.getElementById('dialogue-content').textContent = "Now click the End button to finish the tutorial!";
+        }
+        
+        window.onload = positionElements;
+    </script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rarity Manager</title>
+    <link rel="stylesheet" href="/RPGUI/rpgui.css">
+    <script src="/RPGUI/rpgui.js"></script>
+    <style>
+        body { background: #2a4d3a; margin: 0; padding: 20px; }
+        .rpgui-container { margin: 20px auto; max-width: 1200px; max-height: 80vh; overflow-y: auto; }
+        .family-section { margin-bottom: 30px; }
+        .monster-row {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .monster-name { flex: 1; font-weight: bold; min-width: 200px; }
+        .family-section { display: flex; gap: 5px; align-items: center; }
+        .family-btn {
+            padding: 3px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            background: #28a745;
+            color: white;
+        }
+        .current-rarity { 
+            padding: 5px 10px;
+            border-radius: 3px;
+            color: white;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+        }
+        .rarity-buttons { display: flex; gap: 5px; }
+        .rarity-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+        }
+        .rarity-1 { background: #6c757d; }
+        .rarity-1-5 { background: #6c757d; }
+        .rarity-2 { background: #28a745; }
+        .rarity-2-5 { background: #6f42c1; }
+        .rarity-3 { background: #6f42c1; }
+        .rarity-3 { background: #6f42c1; color: black; }
+        .rarity-4 { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content">
+        <div class="rpgui-container framed">
+            <h1>Monster Rarity Manager</h1>
+            <p>Update monster rarities by clicking the rarity buttons.</p>
+            <div id="monsterList"></div>
+        </div>
+    </div>
+
+    <script>
+        let monsters = [];
+
+        async function loadMonsters() {
+            try {
+                const response = await fetch('/api/monsters');
+                monsters = await response.json();
+                displayMonsters();
+            } catch (error) {
+                console.error('Failed to load monsters:', error);
+            }
+        }
+
+        function getRarityClass(rarity) {
+            if (rarity <= 0.5) return 'rarity-1';
+            if (rarity <= 0.5) return 'rarity-1';
+            if (rarity <= 1) return 'rarity-1';
+            if (rarity <= 1.5) return 'rarity-1-5';
+            if (rarity <= 2) return 'rarity-2';
+            if (rarity <= 2.5) return 'rarity-2-5';
+            if (rarity <= 3) return 'rarity-3';
+            if (rarity <= 3.5) return 'rarity-3-5';
+            return 'rarity-4';
+        }
+
+        function getRarityLabel(rarity) {
+            if (rarity <= 1) return '1★';
+            if (rarity <= 1.5) return '1.5★';
+            if (rarity <= 2) return '2★';
+            if (rarity <= 2.5) return '2.5★';
+            if (rarity <= 3) return '3★';
+            if (rarity <= 3.5) return '3.5★';
+            return '4★';
+        }
+
+        function displayMonsters() {
+            const listDiv = document.getElementById('monsterList');
+            listDiv.innerHTML = '';
+
+            const sortedMonsters = monsters.sort((a, b) => a.name.localeCompare(b.name));
+
+            sortedMonsters.forEach(monster => {
+                const monsterDiv = document.createElement('div');
+                monsterDiv.className = 'monster-row';
+                
+                monsterDiv.innerHTML = `
+                    <div class="monster-name">${monster.name}</div>
+                    <div class="family-section">
+                        <span>${monster.family || 'Unknown'}</span>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Slime')">Slime</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Dragon')">Dragon</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Beast')">Beast</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Bird')">Bird</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Plant')">Plant</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Bug')">Bug</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Demon')">Demon</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Undead')">Undead</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Material')">Material</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, 'Aquatic')">Aquatic</button>
+                        <button class="family-btn" onclick="updateFamily(${monster.id}, '?')">?</button>
+                    </div>
+                    <div class="current-rarity ${getRarityClass(monster.rarity || 1)}">${getRarityLabel(monster.rarity || 1)}</div>
+                    <div class="rarity-buttons">
+                        <button class="rarity-btn rarity-1" onclick="updateRarity(${monster.id}, 1)">1★</button>
+                        <button class="rarity-btn rarity-1-5" onclick="updateRarity(${monster.id}, 1.5)">1.5★</button>
+                        <button class="rarity-btn rarity-2" onclick="updateRarity(${monster.id}, 2)">2★</button>
+                        <button class="rarity-btn rarity-2-5" onclick="updateRarity(${monster.id}, 2.5)">2.5★</button>
+                        <button class="rarity-btn rarity-3" onclick="updateRarity(${monster.id}, 3)">3★</button>
+                        <button class="rarity-btn rarity-3-5" onclick="updateRarity(${monster.id}, 3.5)">3.5★</button>
+                        <button class="rarity-btn rarity-4" onclick="updateRarity(${monster.id}, 4)">4★</button>
+                    </div>
+                `;
+                
+                listDiv.appendChild(monsterDiv);
+            });
+        }
+
+        async function updateRarity(monsterId, newRarity) {
+            try {
+                const response = await fetch(`/api/monsters/${monsterId}/rarity`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rarity: newRarity })
+                });
+
+                if (response.ok) {
+                    const monster = monsters.find(m => m.id === monsterId);
+                    if (monster) {
+                        monster.rarity = newRarity;
+                        displayMonsters();
+                    }
+                } else {
+                    alert('Failed to update rarity');
+                }
+            } catch (error) {
+                console.error('Error updating rarity:', error);
+                alert('Error updating rarity');
+            }
+        }
+
+        async function updateFamily(monsterId, newFamily) {
+            try {
+                const response = await fetch(`/api/monsters/${monsterId}/family`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ family: newFamily })
+                });
+
+                if (response.ok) {
+                    const monster = monsters.find(m => m.id === monsterId);
+                    if (monster) {
+                        monster.family = newFamily;
+                        displayMonsters();
+                    }
+                } else {
+                    alert('Failed to update family');
+                }
+            } catch (error) {
+                console.error('Error updating family:', error);
+                alert('Error updating family');
+            }
+        }
+
+        loadMonsters();
+    </script>
+</body>
+</html>

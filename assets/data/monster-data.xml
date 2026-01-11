@@ -1640,7 +1640,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           <spawn-locations>
             <location>
               <map>Elf Key World</map>
-              <description>Inside Agdevils Hideout (Cobi Version)</description>
+              <description>Inside Agdemons Hideout (Cobi Version)</description>
             </location>
           </spawn-locations>
           <skills>
@@ -1756,7 +1756,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
           <spawn-locations>
             <location>
               <map>Elf Key World</map>
-              <description>Inside Agdevils Hideout</description>
+              <description>Inside Agdemons Hideout</description>
             </location>
           </spawn-locations>
           <skills>
@@ -2056,7 +2056,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         </monster>
       </monsters>
     </family>
-    <family name="devil">
+    <family name="demon">
       <monsters>
         <monster name="EvilBeast" in_story="true">
           <spawn-locations>
@@ -3937,7 +3937,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="WonderEgg"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="PearlGel">
@@ -4024,7 +4024,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="slime"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Snaily">
@@ -4412,7 +4412,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="dragon"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="MadDragon">
@@ -4645,7 +4645,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="CatMage"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="BeastNite">
@@ -4784,7 +4784,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="beast"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
         <breed-requirement monster="MetalDrak"/>
         <breed-requirement monster="Roboster"/>
       </mate>
@@ -4880,7 +4880,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Grizzly"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="HammerMan">
@@ -5427,7 +5427,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="LandOwl"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="MadCondor">
@@ -5489,7 +5489,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="bird"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="MadRaven">
@@ -5652,7 +5652,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Eggplaton"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="CactiBall">
@@ -5815,7 +5815,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="plant"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="HerbMan">
@@ -5823,7 +5823,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="DanceVegi"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="HerbMan">
@@ -6131,7 +6131,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Butterfly"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="GiantMoth">
@@ -6156,7 +6156,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="bug"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="GoHopper">
@@ -6185,7 +6185,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="WarMantis"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Lipsy">
@@ -6235,7 +6235,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="TailEater"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Pyuro">
@@ -6300,7 +6300,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Sickler"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="WeedBug">
@@ -6432,7 +6432,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="ArcDemon">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="????"/>
@@ -6468,7 +6468,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Bubblemon">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="water"/>
@@ -6510,7 +6510,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="DarkEye">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="plant"/>
@@ -6518,7 +6518,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Demonite">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="bird"/>
@@ -6560,7 +6560,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="EvilArmor">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement monster="ArmorPede"/>
@@ -6568,7 +6568,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="EvilBeast">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="material"/>
@@ -6592,7 +6592,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="EyeBall">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="bug"/>
@@ -6681,7 +6681,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Gigantes">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement monster="BigEye"/>
@@ -6697,7 +6697,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="GoatHorn">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement monster="DarkHorn"/>
@@ -6705,7 +6705,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Gremlin">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="beast"/>
@@ -6733,7 +6733,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Grendal">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement monster="MadDragon"/>
@@ -6767,7 +6767,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Lionex">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement monster="LizardMan"/>
@@ -6775,7 +6775,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="MadKnight">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement monster="RogueNite"/>
@@ -6793,7 +6793,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="MedusaEye">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="dragon"/>
@@ -6833,7 +6833,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Ogre">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement monster="HammerMan"/>
@@ -6841,7 +6841,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Orc">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement monster="BeanMan"/>
@@ -6849,7 +6849,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="Pixy">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="slime"/>
@@ -6857,7 +6857,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
     </breed>
     <breed target="SkulRider">
       <base>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </base>
       <mate>
         <breed-requirement family="zombie"/>
@@ -6945,7 +6945,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="zombie"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="DeadNoble">
@@ -7161,7 +7161,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="MadSpirit"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="NiteWhip">
@@ -7203,7 +7203,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Hork"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Reaper">
@@ -7235,7 +7235,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="WhiteKing"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Shadow">
@@ -7481,7 +7481,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="IceMan"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Balzak">
@@ -7599,7 +7599,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Gismo"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="EvilPot">
@@ -7757,7 +7757,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="material"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="MetalDrak">
@@ -7834,7 +7834,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="RogueNite"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Puppetor">
@@ -8051,7 +8051,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
       </base>
       <mate>
         <breed-requirement monster="Clawster"/>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Clawster">
@@ -8060,7 +8060,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
       </base>
       <mate>
         <breed-requirement monster="ArmyCrab"/>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Digong">
@@ -8134,7 +8134,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="water"/>
       </base>
       <mate>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="MerTiger">
@@ -8280,7 +8280,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
       </base>
       <mate>
         <breed-requirement monster="Mimic"/>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="SeaHorse">
@@ -8289,7 +8289,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
       </base>
       <mate>
         <breed-requirement family="dragon"/>
-        <breed-requirement family="devil"/>
+        <breed-requirement family="demon"/>
       </mate>
     </breed>
     <breed target="Starfish">

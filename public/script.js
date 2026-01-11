@@ -164,6 +164,20 @@ function openMonsterSelector(slot) {
     populateMonsterSelectorGrid();
 }
 
+// Get rarity class for a monster
+function getRarityClass(rarity) {
+    if (!rarity) return 'rarity-1';
+    
+    if (rarity <= 0.5) return 'rarity-1';
+            if (rarity <= 1) return 'rarity-1';
+    if (rarity <= 1.5) return 'rarity-1-5';
+    if (rarity <= 2) return 'rarity-2';
+    if (rarity <= 2.5) return 'rarity-2-5';
+    if (rarity <= 3) return 'rarity-3';
+    if (rarity <= 3.5) return 'rarity-3-5';
+    return 'rarity-4';
+}
+
 // Populate monster selector grid
 function populateMonsterSelectorGrid() {
     const grid = document.getElementById('monster-selector-grid');
@@ -174,7 +188,7 @@ function populateMonsterSelectorGrid() {
     
     filteredMonsters.forEach(monster => {
         const item = document.createElement('div');
-        item.className = 'monster-grid-item';
+        item.className = `monster-grid-item ${getRarityClass(monster.rarity)}`;
         item.onclick = () => selectMonsterFromGrid(monster.id);
         
         const img = new Image();
@@ -236,7 +250,8 @@ function getFilteredModalMonsters() {
     
     return monsters.filter(monster => {
         const nameMatch = monster.name.toLowerCase().includes(nameFilter);
-        const familyMatch = selectedModalFamilies.includes('ALL') || selectedModalFamilies.includes(monster.family);
+        const familyMatch = selectedModalFamilies.includes('ALL') || 
+                           selectedModalFamilies.some(family => family.toLowerCase() === (monster.family || '').toLowerCase());
         return nameMatch && familyMatch;
     });
 }
@@ -424,8 +439,11 @@ function applyPaletteWithPartId(imageData, targetPalette, sourcePalette, partId)
 function setPalette(mode) {
     console.log('setPalette called:', mode);
     currentPalette = mode;
-    document.querySelectorAll('.palette-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`[data-palette="${mode}"]`).classList.add('active');
+    document.getElementById('palette-original').classList.remove('active');
+    document.getElementById('palette-monster1').classList.remove('active');
+    document.getElementById('palette-monster2').classList.remove('active');
+    document.getElementById('palette-custom').classList.remove('active');
+    document.getElementById(`palette-${mode}`).classList.add('active');
     redrawWorkspace();
 }
 
@@ -456,7 +474,7 @@ function displayPalettes() {
             <div class="color-grid" id="monster2-colors"></div>
         </div>
         <div class="mappings-display" id="mappings-display"></div>
-        <button onclick="resetMappings()" class="reset-mappings-btn">Reset Mappings</button>
+        <button class="rpgui-button" onclick="resetMappings()" style="width: 100%; margin-top: 10px;"><p>Reset Mappings</p></button>
     `;
     
     const m1Grid = document.getElementById('monster1-colors');
@@ -685,7 +703,10 @@ function updateAvailableParts() {
         if (monster && monster.parts) {
             const parts = JSON.parse(monster.parts);
             const partsList = document.createElement('div');
-            partsList.className = 'parts-list';
+            partsList.style.display = 'grid';
+            partsList.style.gridTemplateColumns = 'repeat(4, 1fr)';
+            partsList.style.gap = '5px';
+            partsList.style.justifyItems = 'center';
             
             // Extract palette for this monster
             if (slot === 1 && monster1Palette.length === 0) {
@@ -1219,10 +1240,69 @@ function handlePointerUp() {
 
 // Handle keyboard input for arrow key movement
 function handleKeyDown(e) {
+    // Check if any modal is open - if so, disable keyboard shortcuts
+    const modals = document.querySelectorAll('.modal');
+    const isModalOpen = Array.from(modals).some(modal => 
+        modal.style.display === 'block' || modal.classList.contains('show')
+    );
+    
+    if (isModalOpen) return;
+    
     if (!selectedParts.length) return;
     
-    // Only handle arrow keys
-    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    // Layer movement shortcuts (Page Up/Page Down or Shift + Arrow Up/Down)
+    if (e.key === 'PageUp' || (e.shiftKey && e.key === 'ArrowUp')) {
+        e.preventDefault();
+        moveLayerUp();
+        return;
+    }
+    if (e.key === 'PageDown' || (e.shiftKey && e.key === 'ArrowDown')) {
+        e.preventDefault();
+        moveLayerDown();
+        return;
+    }
+    
+    // Part selection shortcuts (Shift + Left/Right arrows)
+    if (e.shiftKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        selectPreviousPart();
+        return;
+    }
+    if (e.shiftKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        selectNextPart();
+        return;
+    }
+    
+    // Transform shortcuts
+    if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        rotateSelectedPart(90);
+        return;
+    }
+    if (e.key === 'f' && !e.shiftKey) {
+        e.preventDefault();
+        flipSelectedPart('vertical');
+        return;
+    }
+    if (e.key === 'F' && e.shiftKey) {
+        e.preventDefault();
+        flipSelectedPart('horizontal');
+        return;
+    }
+    if (e.shiftKey && (e.key === '-' || e.key === '_')) {
+        e.preventDefault();
+        adjustScale(-0.1);
+        return;
+    }
+    if (e.shiftKey && (e.key === '+' || e.key === '=')) {
+        e.preventDefault();
+        adjustScale(0.1);
+        return;
+    }
+    
+    // Only handle arrow keys for movement (without Shift)
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) || e.shiftKey) return;
     
     // Prevent default scrolling behavior
     e.preventDefault();
@@ -1258,8 +1338,11 @@ function clearWorkspace() {
     monster2Palette = [];
     colorMappings = {};
     selectedColor1 = null;
-    document.querySelectorAll('.palette-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector('[data-palette="original"]')?.classList.add('active');
+    document.getElementById('palette-original').classList.remove('active');
+    document.getElementById('palette-monster1').classList.remove('active');
+    document.getElementById('palette-monster2').classList.remove('active');
+    document.getElementById('palette-custom').classList.remove('active');
+    document.getElementById('palette-original').classList.add('active');
     const display = document.getElementById('palette-display');
     if (display) display.innerHTML = '';
     drawGrid();
@@ -1360,7 +1443,7 @@ function displayGallery(creations) {
     
     creations.forEach(creation => {
         const item = document.createElement('div');
-        item.className = 'gallery-item';
+        item.className = 'gallery-item rpgui-container framed';
         
         const canvas = document.createElement('canvas');
         canvas.width = 128;
@@ -1664,7 +1747,7 @@ function filterGallery() {
         if (!familyMatch) {
             familyMatch = parentList.some(parent => {
                 const monster = monsters.find(m => m.name === parent);
-                return monster && selectedFamilies.includes(monster.family);
+                return monster && selectedFamilies.some(family => family.toLowerCase() === (monster.family || '').toLowerCase());
             });
         }
         
@@ -1914,6 +1997,35 @@ function sendToBack() {
     }
 }
 
+// Part selection functions
+function selectNextPart() {
+    if (placedParts.length === 0) return;
+    
+    let currentIndex = selectedPart ? placedParts.indexOf(selectedPart) : -1;
+    const nextIndex = (currentIndex + 1) % placedParts.length;
+    
+    selectedPart = placedParts[nextIndex];
+    selectedParts = [selectedPart];
+    selectedLayerIndex = nextIndex;
+    
+    redrawWorkspace();
+    updateLayersList();
+}
+
+function selectPreviousPart() {
+    if (placedParts.length === 0) return;
+    
+    let currentIndex = selectedPart ? placedParts.indexOf(selectedPart) : 0;
+    const prevIndex = currentIndex === 0 ? placedParts.length - 1 : currentIndex - 1;
+    
+    selectedPart = placedParts[prevIndex];
+    selectedParts = [selectedPart];
+    selectedLayerIndex = prevIndex;
+    
+    redrawWorkspace();
+    updateLayersList();
+}
+
 // Remove selected part
 function removeSelectedPart() {
     if (selectedParts.length > 0) {
@@ -1985,8 +2097,11 @@ function confirmMonsterSelection() {
     currentPalette = 'original';
     colorMappings = {};
     selectedColor1 = null;
-    document.querySelectorAll('.palette-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector('[data-palette="original"]')?.classList.add('active');
+    document.getElementById('palette-original').classList.remove('active');
+    document.getElementById('palette-monster1').classList.remove('active');
+    document.getElementById('palette-monster2').classList.remove('active');
+    document.getElementById('palette-custom').classList.remove('active');
+    document.getElementById('palette-original').classList.add('active');
     const display = document.getElementById('palette-display');
     if (display) display.innerHTML = '';
     
@@ -2017,11 +2132,13 @@ function updateSelectedMonstersDisplay() {
                 ctx.drawImage(img, 0, 0, 64, 64);
                 display.innerHTML = '';
                 display.appendChild(canvas);
+                display.className = `${display.className.split(' ')[0]} ${getRarityClass(monster.rarity)}`;
             };
             img.src = monster.sprite;
             nameDisplay.textContent = monster.name;
         } else {
             display.innerHTML = 'Not selected';
+            display.className = display.className.split(' ')[0]; // Remove rarity class
             nameDisplay.textContent = '';
         }
     });
@@ -2048,27 +2165,31 @@ function closeModalToGallery() {
 
 // Tab functionality
 function showTab(tabName) {
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
+    // Hide all tab content
+    document.getElementById('creator').style.display = 'none';
+    document.getElementById('gallery').style.display = 'none';
     
-    document.getElementById(tabName).classList.add('active');
-    event.target.classList.add('active');
+    // Remove active class from all tab buttons
+    document.getElementById('creator-tab').classList.remove('active');
+    document.getElementById('gallery-tab').classList.remove('active');
+    
+    // Show selected tab and mark button as active
+    document.getElementById(tabName).style.display = 'block';
+    document.getElementById(`${tabName}-tab`).classList.add('active');
     
     if (tabName === 'gallery') {
         loadGallery();
         populateGalleryFilter();
         // Reset filters when opening gallery
         selectedFamilies = ['ALL'];
-        document.querySelectorAll('.family-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('[data-family="ALL"]').classList.add('active');
+        document.querySelectorAll('#family-ALL').forEach(b => b.classList.remove('active'));
+        document.querySelector('#family-ALL').classList.add('active');
         document.getElementById('gallery-filter').value = '';
         document.getElementById('author-filter').value = '';
     } else if (tabName === 'creator') {
-        openMonsterModal();
+        if (!selectedMonsters[1] || !selectedMonsters[2]) {
+            openMonsterModal();
+        }
     }
 }
 

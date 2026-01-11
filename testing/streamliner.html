@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parts Streamliner</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+        
+        .left-panel {
+            width: 50%;
+            border-right: 2px solid #ccc;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .right-panel {
+            width: 50%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .monster-list {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .monster-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin: 5px 0;
+            cursor: pointer;
+            background: #f9f9f9;
+        }
+        
+        .monster-item:hover {
+            background: #e9e9e9;
+        }
+        
+        .monster-item.selected {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        
+        .parts-list {
+            margin-top: 20px;
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+        
+        .part-item {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px 10px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .part-item:hover {
+            background: #0056b3;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+        }
+        
+        .controls button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .save-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+        }
+        
+        .reset-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            border: 2px solid #333;
+            position: relative;
+            background: #f8f9fa;
+        }
+        
+        #canvas {
+            border: 1px solid #000;
+            background: white;
+            image-rendering: pixelated;
+        }
+        
+        .canvas-part {
+            position: absolute;
+            cursor: move;
+            border: 1px dashed #007bff;
+        }
+        
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="left-panel">
+        <h2>Monsters</h2>
+        <div id="monster-list" class="monster-list">
+            <div class="loading">Loading monsters...</div>
+        </div>
+        
+        <div id="parts-section" style="display: none;">
+            <h3>Parts for <span id="selected-monster-name"></span></h3>
+            <div id="parts-list" class="parts-list"></div>
+        </div>
+    </div>
+    
+    <div class="right-panel">
+        <div class="controls">
+            <button id="save-btn" class="save-btn">Save</button>
+            <button id="reset-btn" class="reset-btn">Reset</button>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas" width="400" height="400"></canvas>
+            <div id="reference-monster" style="margin-top: 10px; text-align: center;">
+                <div style="font-weight: bold; margin-bottom: 5px;">Reference:</div>
+                <img id="monster-sprite" style="image-rendering: pixelated; transform: scale(5); transform-origin: center; border: 1px solid #ccc;" />
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedMonster = null;
+        let canvasParts = [];
+        let draggedPart = null;
+        let dragOffset = { x: 0, y: 0 };
+        
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Load monsters
+        async function loadMonsters() {
+            try {
+                const response = await fetch('/api/monsters');
+                const monsters = await response.json();
+                
+                const monsterList = document.getElementById('monster-list');
+                monsterList.innerHTML = '';
+                
+                monsters.sort((a, b) => a.name.localeCompare(b.name)).forEach(monster => {
+                    const div = document.createElement('div');
+                    div.className = 'monster-item';
+                    div.textContent = monster.name;
+                    div.onclick = () => selectMonster(monster);
+                    monsterList.appendChild(div);
+                });
+            } catch (error) {
+                console.error('Error loading monsters:', error);
+                document.getElementById('monster-list').innerHTML = '<div>Error loading monsters</div>';
+            }
+        }
+        
+        // Select monster and load its parts
+        async function selectMonster(monster) {
+            selectedMonster = monster;
+            
+            // Update UI
+            document.querySelectorAll('.monster-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+            
+            document.getElementById('selected-monster-name').textContent = monster.name;
+            document.getElementById('parts-section').style.display = 'block';
+            
+            // Show reference monster sprite
+            const monsterSprite = document.getElementById('monster-sprite');
+            monsterSprite.src = `/assets/monsters/${monster.name}.png`;
+            document.getElementById('reference-monster').style.display = 'block';
+            
+            // Load parts from filesystem
+            try {
+                const response = await fetch(`/api/monster-parts/${monster.name}`);
+                const parts = await response.json();
+                
+                const partsList = document.getElementById('parts-list');
+                partsList.innerHTML = '';
+                
+                parts.forEach(part => {
+                    const div = document.createElement('div');
+                    div.className = 'part-item';
+                    div.textContent = part.name;
+                    div.onclick = () => addPartToCanvas(part);
+                    partsList.appendChild(div);
+                });
+            } catch (error) {
+                console.error('Error loading parts:', error);
+                document.getElementById('parts-list').innerHTML = '<div>Error loading parts</div>';
+            }
+        }
+        
+        // Add part to canvas
+        async function addPartToCanvas(part) {
+            if (!selectedMonster) return;
+            
+            const img = new Image();
+            img.onload = () => {
+                const canvasPart = {
+                    name: part.name,
+                    filename: part.filename,
+                    image: img,
+                    x: Math.random() * (canvas.width - img.width * 5),
+                    y: Math.random() * (canvas.height - img.height * 5),
+                    width: img.width,
+                    height: img.height
+                };
+                
+                canvasParts.push(canvasPart);
+                redrawCanvas();
+            };
+            
+            img.style.imageRendering = 'pixelated';
+            img.src = `/assets/simple_parts/${selectedMonster.name}/${part.filename}`;
+        }
+        
+        // Redraw canvas
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.imageSmoothingEnabled = false;
+            
+            canvasParts.forEach(part => {
+                ctx.drawImage(part.image, part.x, part.y, part.width * 5, part.height * 5);
+            });
+        }
+        
+        // Canvas mouse events
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Find clicked part (reverse order for top-most)
+            for (let i = canvasParts.length - 1; i >= 0; i--) {
+                const part = canvasParts[i];
+                if (x >= part.x && x <= part.x + (part.width * 5) &&
+                    y >= part.y && y <= part.y + (part.height * 5)) {
+                    draggedPart = part;
+                    dragOffset.x = x - part.x;
+                    dragOffset.y = y - part.y;
+                    break;
+                }
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (draggedPart) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Snap to 5-pixel grid to ensure 1x alignment
+                const snapX = Math.round((x - dragOffset.x) / 5) * 5;
+                const snapY = Math.round((y - dragOffset.y) / 5) * 5;
+                
+                draggedPart.x = snapX;
+                draggedPart.y = snapY;
+                
+                redrawCanvas();
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            draggedPart = null;
+        });
+        
+        // Save button
+        document.getElementById('save-btn').addEventListener('click', async () => {
+            if (canvasParts.length === 0) {
+                alert('No parts on canvas to save');
+                return;
+            }
+            
+            const partName = prompt('Enter name for the combined part:');
+            if (!partName) return;
+            
+            // Create 1x scale canvas for saving
+            const saveCanvas = document.createElement('canvas');
+            const saveCtx = saveCanvas.getContext('2d');
+            saveCtx.imageSmoothingEnabled = false;
+            saveCtx.webkitImageSmoothingEnabled = false;
+            saveCtx.mozImageSmoothingEnabled = false;
+            saveCtx.msImageSmoothingEnabled = false;
+            
+            // Calculate bounds of all parts
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            canvasParts.forEach(part => {
+                const x1 = part.x / 5;
+                const y1 = part.y / 5;
+                const x2 = x1 + part.width;
+                const y2 = y1 + part.height;
+                minX = Math.min(minX, x1);
+                minY = Math.min(minY, y1);
+                maxX = Math.max(maxX, x2);
+                maxY = Math.max(maxY, y2);
+            });
+            
+            saveCanvas.width = Math.ceil(maxX - minX);
+            saveCanvas.height = Math.ceil(maxY - minY);
+            
+            // Draw parts at 1x scale
+            canvasParts.forEach(part => {
+                const x = (part.x / 5) - minX;
+                const y = (part.y / 5) - minY;
+                saveCtx.drawImage(part.image, x, y);
+            });
+            
+            const dataURL = saveCanvas.toDataURL('image/png');
+            const usedFiles = canvasParts.map(part => part.filename);
+            
+            try {
+                const response = await fetch('/api/save-combined-part', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        monsterName: selectedMonster.name,
+                        partName: partName,
+                        imageData: dataURL,
+                        usedFiles: usedFiles
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Part saved successfully!');
+                    canvasParts = [];
+                    redrawCanvas();
+                    selectMonster(selectedMonster);
+                } else {
+                    alert('Error saving part');
+                }
+            } catch (error) {
+                console.error('Error saving part:', error);
+                alert('Error saving part');
+            }
+        });
+        
+        // Reset button
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            canvasParts = [];
+            redrawCanvas();
+        });
+        
+        // Initialize
+        loadMonsters();
+    </script>
+</body>
+</html>

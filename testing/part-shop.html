@@ -53,6 +53,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            border-image-width: 12px;
+            font-size: x-large;
         }
         .container.open .inventory-toggle {
             right: 350px;
@@ -127,6 +129,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            border-image-width: 12px;
+            font-size: x-large;
         }
         .container.monsters-open .monsters-toggle {
             left: 450px;
@@ -159,6 +163,45 @@
             opacity: 1;
             transform: translateX(0);
         }
+        .alchemy-container button {
+            transition: transform 0.2s ease;
+        }
+        .alchemy-container img {
+            transition: transform 0.2s ease;
+        }
+        .alchemy-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .alchemy-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .maker-container button,
+        .maker-container img {
+            transition: transform 0.2s ease;
+        }
+        .maker-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .maker-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .bottom-right-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .bottom-right-buttons .rpgui-button p {
+            font-family: 'Press Start 2P', cursive;
+            color: white;
+            text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+        }
     </style>
 </head>
 <body>
@@ -171,42 +214,53 @@
                 
                 <div class="sample-grid">
                     <div class="rpgui-container framed-grey sample-item">
-                        <p>RANDOM PART #1<br>10G</p>
+                        <p>BODY PARTS<br>10G</p>
                         <button class="rpgui-button" onclick="buyPart(1)"><p>BUY</p></button>
                     </div>
                     <div class="rpgui-container framed-grey sample-item">
-                        <p>RANDOM PART #2<br>10G</p>
+                        <p>FEATURES & WEAPONS<br>10G</p>
                         <button class="rpgui-button" onclick="buyPart(2)"><p>BUY</p></button>
                     </div>
                     <div class="rpgui-container framed-grey sample-item">
-                        <p>RANDOM PART #3<br>10G</p>
+                        <p>SPECIAL PARTS<br>10G</p>
                         <button class="rpgui-button" onclick="buyPart(3)"><p>BUY</p></button>
                     </div>
                 </div>
                 
                 <hr>
                 <h2>Requests</h2>
-                <div id="requests-section">
+                <div id="requests-section" style="max-height: 400px; overflow-y: auto;">
                     <p>Loading requests...</p>
                 </div>
                 
                 <button class="rpgui-button" onclick="toggleInventory()"><p>INVENTORY</p></button>
                 <button class="rpgui-button" onclick="toggleMonsters()"><p>YOUR MONSTERS</p></button>
                 <button class="rpgui-button" onclick="resetProgress()"><p>RESET</p></button>
-                <button class="rpgui-button" onclick="window.location.href='hatched-monster-maker.html'"><p>MAKER</p></button>
             </div>
             
             <div class="monsters-area rpgui-container framed">
                 <h2>Your Monsters</h2>
                 <div id="monsters-section"></div>
             </div>
-            <div class="monsters-toggle rpgui-container framed" onclick="toggleMonsters()"><p id="monsters-toggle-text">&gt;</p></div>
+            <div class="monsters-toggle rpgui-container framed" onclick="toggleMonsters()" style="border-image-width: 12px; font-size: x-large;"><p id="monsters-toggle-text">&gt;</p></div>
             
             <div class="inventory-area rpgui-container framed">
                 <h2>Part Inventory</h2>
                 <div id="inventory"></div>
             </div>
-            <div class="inventory-toggle rpgui-container framed" onclick="toggleInventory()"><p id="toggle-text">&lt;</p></div>
+            <div class="inventory-toggle rpgui-container framed" onclick="toggleInventory()" style="border-image-width: 12px; font-size: x-large;"><p id="toggle-text">&lt;</p></div>
+        </div>
+    </div>
+
+    <!-- Bottom Right Buttons -->
+    <div class="bottom-right-buttons">
+        <div style="position: relative; display: inline-block;" class="maker-container">
+            <button class="rpgui-button" onclick="window.location.href='part-monster-maker.html'" style="position: relative; z-index: 2;"><p>ALTAR OF CREATION</p></button>
+            <img src="/assets/icons/misc/other/Starry Shrine Altar.png" style="position: absolute; width: 150px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="alchemy-container">
+            <button class="rpgui-button" onclick="window.location.href='part-combiner.html'" style="position: relative; z-index: 2;"><p>ALCHEMY POT</p></button>
+            <img src="/assets/icons/misc/alchemy_pot/Alchemy pot_1.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px;">
         </div>
     </div>
 
@@ -232,6 +286,7 @@
                 <p><strong>Base Value:</strong> <span id="preview-monster-value">0</span>G</p>
                 <p><strong>Parts Used:</strong></p>
                 <div id="preview-monster-parts" style="font-size: 12px; text-align: left; margin: 10px 0; max-height: 150px; overflow-y: auto;"></div>
+                <button class="rpgui-button" onclick="sellMonsterFromPreview()"><p>SELL</p></button>
                 <button class="rpgui-button" onclick="closeMonsterPreview()"><p>Close</p></button>
             </div>
         </div>
@@ -248,19 +303,29 @@
                 const response = await fetch('/api/monsters');
                 const monsters = await response.json();
                 
+                // Load discovered monsters from localStorage
+                const discoveredMonsters = JSON.parse(localStorage.getItem('discoveredMonsters')) || [];
+                
                 parts = [];
                 for (const monster of monsters) {
                     if (monster.parts) {
-                        const monsterParts = JSON.parse(monster.parts);
-                        Object.keys(monsterParts).forEach(partName => {
-                            parts.push({
-                                name: partName,
-                                monster: monster.name,
-                                family: monster.family,
-                                rarity: monster.rarity || 1,
-                                sprite: monsterParts[partName]
+                        // Check if monster should be available in shop
+                        const rarityOrder = { 'common': 1, 'uncommon': 2, 'rare': 3, 'epic': 4, 'legendary': 5, 'mythic': 6 };
+                        const rarityLevel = rarityOrder[monster.rarity] || 1;
+                        
+                        // Only include parts from common/uncommon monsters or discovered rare+ monsters
+                        if (rarityLevel < 3 || discoveredMonsters.includes(monster.name)) {
+                            const monsterParts = JSON.parse(monster.parts);
+                            Object.keys(monsterParts).forEach(partName => {
+                                parts.push({
+                                    name: partName,
+                                    monster: monster.name,
+                                    family: monster.family,
+                                    rarity: monster.rarity || 1,
+                                    sprite: monsterParts[partName]
+                                });
                             });
-                        });
+                        }
                     }
                 }
             } catch (error) {
@@ -317,12 +382,11 @@
         }
 
         function getRarity(rarity) {
-            const numRarity = parseFloat(rarity) || 1;
-            if (numRarity >= 4) return { name: 'Mythic', class: 'rarity-mythic' };
-            if (numRarity >= 3) return { name: 'Legendary', class: 'rarity-legendary' };
-            if (numRarity >= 2.5) return { name: 'Epic', class: 'rarity-epic' };
-            if (numRarity >= 2) return { name: 'Rare', class: 'rarity-rare' };
-            if (numRarity >= 1.5) return { name: 'Uncommon', class: 'rarity-uncommon' };
+            if (rarity === 'mythic') return { name: 'Mythic', class: 'rarity-mythic' };
+            if (rarity === 'legendary') return { name: 'Legendary', class: 'rarity-legendary' };
+            if (rarity === 'epic') return { name: 'Epic', class: 'rarity-epic' };
+            if (rarity === 'rare') return { name: 'Rare', class: 'rarity-rare' };
+            if (rarity === 'uncommon') return { name: 'Uncommon', class: 'rarity-uncommon' };
             return { name: 'Common', class: 'rarity-common' };
         }
 
@@ -333,22 +397,66 @@
                 return;
             }
             
-            const inventoryItems = await Promise.all(
-                inventory.map(async (part, index) => {
-                    const rarityInfo = getRarity(part.rarity);
-                    const croppedSprite = await autoCropImage(part.sprite);
-                    return `<div class="inventory-item ${rarityInfo.class}" onclick="showPartPreview(${index})">
-                        <img src="${croppedSprite}" class="part-icon" alt="${part.name}">
-                        <div>
-                            <div style="font-weight: 600;">${part.name}</div>
-                            <div style="font-size: 12px;">from ${part.monster}</div>
-                            <div style="font-size: 12px; font-weight: 600;">${rarityInfo.name}</div>
-                        </div>
-                    </div>`;
-                })
-            );
+            // Group parts by type
+            const partsByType = {};
+            inventory.forEach((part, index) => {
+                const type = part.name.toLowerCase().includes('head') ? 'Head' :
+                           part.name.toLowerCase().includes('body') || part.name.toLowerCase().includes('torso') ? 'Body' :
+                           part.name.toLowerCase().includes('arm') ? 'Arms' :
+                           part.name.toLowerCase().includes('leg') ? 'Legs' :
+                           part.name.toLowerCase().includes('wing') ? 'Wings' :
+                           part.name.toLowerCase().includes('eye') ? 'Eyes' :
+                           part.name.toLowerCase().includes('ear') ? 'Ears' :
+                           part.name.toLowerCase().includes('tail') ? 'Tails' :
+                           'Other';
+                           
+                if (!partsByType[type]) partsByType[type] = [];
+                partsByType[type].push({...part, index});
+            });
             
-            inventoryDiv.innerHTML = inventoryItems.join('');
+            let inventoryHtml = '';
+            
+            for (const [type, parts] of Object.entries(partsByType).sort()) {
+                inventoryHtml += `
+                    <div style="margin-bottom: 10px;">
+                        <div onclick="toggleCategory('${type}')" style="cursor: pointer; padding: 8px; background: #4a5c4a; color: white; font-weight: bold; border: 1px solid #666;">
+                            <span id="arrow-${type}">▶</span> ${type} (${parts.length})
+                        </div>
+                        <div id="category-${type}" style="display: none;">
+                `;
+                
+                const categoryItems = await Promise.all(
+                    parts.map(async (part) => {
+                        const rarityInfo = getRarity(part.rarity);
+                        const croppedSprite = await autoCropImage(part.sprite);
+                        return `<div class="inventory-item ${rarityInfo.class}" onclick="showPartPreview(${part.index})">
+                            <img src="${croppedSprite}" class="part-icon" alt="${part.name}">
+                            <div>
+                                <div style="font-weight: 600;">${part.name}</div>
+                                <div style="font-size: 12px;">from ${part.monster}</div>
+                                <div style="font-size: 12px; font-weight: 600;">${rarityInfo.name}</div>
+                            </div>
+                        </div>`;
+                    })
+                );
+                
+                inventoryHtml += categoryItems.join('') + '</div></div>';
+            }
+            
+            inventoryDiv.innerHTML = inventoryHtml;
+        }
+        
+        function toggleCategory(type) {
+            const category = document.getElementById(`category-${type}`);
+            const arrow = document.getElementById(`arrow-${type}`);
+            
+            if (category.style.display === 'none') {
+                category.style.display = 'block';
+                arrow.textContent = '▼';
+            } else {
+                category.style.display = 'none';
+                arrow.textContent = '▶';
+            }
         }
 
         function updateGold() {
@@ -410,14 +518,52 @@
             // Get rarity based on chances
             const targetRarity = getRarityByChance();
             
-            // Filter parts by rarity range
-            const eligibleParts = parts.filter(part => {
+            // Filter parts by category and rarity
+            let categoryParts;
+            if (partNum === 1) {
+                // Body parts: legs, wings, arms, heads, torsos
+                categoryParts = parts.filter(part => {
+                    const name = part.name.toLowerCase();
+                    return name.includes('leg') || name.includes('wing') || name.includes('arm') || 
+                           name.includes('head') || name.includes('torso') || name.includes('body');
+                });
+            } else if (partNum === 2) {
+                // Features & weapons: eyes, ears, nose, weapons
+                categoryParts = parts.filter(part => {
+                    const name = part.name.toLowerCase();
+                    return name.includes('eye') || name.includes('ear') || name.includes('nose') || 
+                           name.includes('sword') || name.includes('weapon') || name.includes('axe') || 
+                           name.includes('spear') || name.includes('bow') || name.includes('staff');
+                });
+            } else {
+                // Special parts: everything else
+                categoryParts = parts.filter(part => {
+                    const name = part.name.toLowerCase();
+                    const isBodyPart = name.includes('leg') || name.includes('wing') || name.includes('arm') || 
+                                      name.includes('head') || name.includes('torso') || name.includes('body');
+                    const isFeature = name.includes('eye') || name.includes('ear') || name.includes('nose') || 
+                                     name.includes('sword') || name.includes('weapon') || name.includes('axe') || 
+                                     name.includes('spear') || name.includes('bow') || name.includes('staff');
+                    return !isBodyPart && !isFeature;
+                });
+            }
+            
+            // Filter by rarity within category
+            const eligibleParts = categoryParts.filter(part => {
                 const partRarity = parseFloat(part.rarity) || 1;
                 return Math.abs(partRarity - targetRarity) < 0.5;
             });
             
-            // If no parts match exact rarity, fall back to all parts
-            const availableParts = eligibleParts.length > 0 ? eligibleParts : parts;
+            // If no parts match exact rarity, fall back to category parts
+            const availableParts = eligibleParts.length > 0 ? eligibleParts : categoryParts;
+            
+            if (availableParts.length === 0) {
+                showToast('No parts available in this category!');
+                gold += partPrice; // Refund
+                updateGold();
+                return;
+            }
+            
             const randomPart = availableParts[Math.floor(Math.random() * availableParts.length)];
             
             inventory.push(randomPart);
@@ -449,10 +595,22 @@
                 localStorage.removeItem('gold');
                 localStorage.removeItem('partInventory');
                 localStorage.removeItem('activeRequests');
+                localStorage.removeItem('discoveredMonsters');
+                localStorage.removeItem('requestTimers');
+                localStorage.removeItem('rerollCosts');
+                localStorage.removeItem('fulfilledRequests');
+                localStorage.removeItem('unlockedSlots');
+                localStorage.removeItem('partCombinerTutorialCompleted');
+                localStorage.removeItem('partMonsterMakerTutorialCompleted');
                 gold = 100;
                 inventory = [];
+                requestTimers = {};
+                rerollCosts = { daily_0: 0, daily_1: 0, daily_2: 0, weekly: 0 };
+                fulfilledRequests = {};
+                initializeTimers();
                 updateGold();
                 updateInventory();
+                updateRequests();
                 document.getElementById('requests-section').innerHTML = '<p>No active requests</p>';
                 alert('Progress reset!');
             }
@@ -476,9 +634,9 @@
 
         async function loadCreatedMonsters() {
             try {
-                const response = await fetch('/api/creations?source=part-maker');
+                const response = await fetch('/api/creations');
                 const creations = await response.json();
-                const userName = localStorage.getItem('userName');
+                const userName = localStorage.getItem('userName') || 'Anonymous';
                 
                 const userMonsters = creations.filter(creation => creation.author === userName);
                 
@@ -574,12 +732,15 @@
                 ctx.restore();
             }
         }
+        let currentPreviewMonster = null;
+        
         async function showMonsterPreview(monsterIndex) {
-            const response = await fetch('/api/creations?source=part-maker');
+            const response = await fetch('/api/creations');
             const creations = await response.json();
-            const userName = localStorage.getItem('userName');
+            const userName = localStorage.getItem('userName') || 'Anonymous';
             const userMonsters = creations.filter(creation => creation.author === userName);
             const monster = userMonsters[monsterIndex];
+            currentPreviewMonster = monster;
             
             let monsterDisplay;
             if (monster.creation_data) {
@@ -595,23 +756,53 @@
                 monsterDisplay = await autoCropImage(monster.sprite);
             }
             
-            // Calculate monster value and get parts info
-            let totalValue = 0;
+            // Calculate monster value and get parts info with bonuses
+            let baseValue = 0;
             let partsInfo = [];
+            let bonusText = '';
             
             if (monster.creation_data) {
                 const data = JSON.parse(monster.creation_data);
                 if (data.placedParts) {
+                    // Calculate base value
+                    data.placedParts.forEach(part => {
+                        const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                        if (partData) {
+                            const rarityValues = { 'common': 1, 'uncommon': 1.5, 'rare': 2, 'epic': 2.5, 'legendary': 3, 'mythic': 4 };
+                            const rarityValue = rarityValues[partData.rarity] || 1;
+                            baseValue += Math.floor(rarityValue * 10);
+                        }
+                    });
+                    
+                    // Calculate same-monster bonuses
+                    const monsterCounts = {};
+                    data.placedParts.forEach(part => {
+                        const key = `${part.name}-${part.monster}`;
+                        if (!monsterCounts[part.monster]) monsterCounts[part.monster] = new Set();
+                        monsterCounts[part.monster].add(key);
+                    });
+                    
+                    let bonusMultiplier = 0;
+                    const bonuses = [];
+                    Object.entries(monsterCounts).forEach(([monsterName, uniqueParts]) => {
+                        const count = uniqueParts.size;
+                        if (count >= 2) {
+                            const bonus = 0.1 + (count - 2) * 0.2;
+                            bonusMultiplier += bonus;
+                            bonuses.push(`${monsterName}: +${Math.round(bonus * 100)}%`);
+                        }
+                    });
+                    
+                    if (bonuses.length > 0) {
+                        bonusText = `<div style="color: #90EE90; font-size: 11px; margin-top: 5px;">${bonuses.join(', ')}</div>`;
+                    }
+                    
+                    baseValue = Math.floor(baseValue * (1 + bonusMultiplier));
+                    
                     const partCounts = {};
                     data.placedParts.forEach(part => {
                         const partKey = `${part.name} (${part.monster})`;
                         partCounts[partKey] = (partCounts[partKey] || 0) + 1;
-                        
-                        // Find part rarity for value calculation
-                        const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
-                        if (partData) {
-                            totalValue += Math.floor(partData.rarity * 10);
-                        }
                     });
                     
                     partsInfo = await Promise.all(
@@ -635,62 +826,134 @@
             
             document.getElementById('preview-monster-name').textContent = monster.name;
             document.getElementById('preview-monster-image').src = monsterDisplay;
-            document.getElementById('preview-monster-value').textContent = totalValue;
+            document.getElementById('preview-monster-value').innerHTML = `${isNaN(baseValue) ? '0' : baseValue}${bonusText}`;
             document.getElementById('preview-monster-parts').innerHTML = partsInfo.length > 0 ? partsInfo.join('') : 'No parts data available';
             document.getElementById('monster-preview-modal').style.display = 'flex';
+        }
+
+        function canMakeRequestMonster(request) {
+            // Handle "Need any parts from X family monsters" (weekly with 0 parts)
+            const anyPartsMatch = request.description.match(/Need any parts from (\w+) family monsters/);
+            if (anyPartsMatch) {
+                const family = anyPartsMatch[1];
+                return inventory.some(part => {
+                    const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                    return partData && partData.family && partData.family.toLowerCase() === family.toLowerCase();
+                });
+            }
+            
+            // Handle "Need Xx Y parts from Z family monsters" or "Need Xx Y parts from any monster"
+            const partsMatch = request.description.match(/Need (\d+)x (\w+) parts from (\w+) family monsters|Need (\d+)x (\w+) parts from any monster/);
+            if (!partsMatch) return false;
+            
+            const quantity = parseInt(partsMatch[1] || partsMatch[4]);
+            const partType = partsMatch[2] || partsMatch[5];
+            const family = partsMatch[3]; // Will be undefined for "any monster"
+            
+            // Count available parts in inventory that match the requirement
+            let availableParts = 0;
+            inventory.forEach(part => {
+                const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                if (partData) {
+                    const matchesPartType = part.name.toLowerCase().includes(partType.toLowerCase());
+                    const matchesFamily = !family || (partData.family && partData.family.toLowerCase() === family.toLowerCase());
+                    if (matchesPartType && matchesFamily) {
+                        availableParts++;
+                    }
+                }
+            });
+            
+            return availableParts >= quantity;
         }
 
         function generateRandomRequest() {
             const partTypes = ['Head', 'Body', 'Wing', 'Tail', 'Leg', 'Arm', 'Eye', 'Horn'];
             const families = ['Bird', 'Beast', 'Dragon', 'Aquatic', 'Insect', 'Plant', 'Undead', 'Elemental'];
-            const quantities = [2, 3, 4, 5];
-            const rewards = [1.3, 1.5, 1.7, 2.0];
-            
+            const quantity = Math.floor(Math.random() * 3) + 1; // 1-3 parts
             const partType = partTypes[Math.floor(Math.random() * partTypes.length)];
-            const quantity = quantities[Math.floor(Math.random() * quantities.length)];
-            const reward = rewards[Math.floor(Math.random() * rewards.length)];
+            const reward = 1.0 + (quantity * 0.1); // Base 1.0x + 0.1x per part
             
-            if (Math.random() < 0.5) {
-                const family = families[Math.floor(Math.random() * families.length)];
-                return {
-                    description: `Need ${quantity}x ${partType} parts from ${family} family monsters`,
-                    reward: reward,
-                    checkFunction: (monster) => {
-                        if (!monster.creation_data) return false;
-                        const data = JSON.parse(monster.creation_data);
-                        if (!data.placedParts) return false;
+            return {
+                description: `Need ${quantity}x ${partType} parts from any monster`,
+                reward: reward,
+                checkFunction: (monster) => {
+                    if (!monster.creation_data) return false;
+                    const data = JSON.parse(monster.creation_data);
+                    if (!data.placedParts) return false;
+                    return data.placedParts.filter(part => 
+                        part.name.toLowerCase().includes(partType.toLowerCase())
+                    ).length >= quantity;
+                }
+            };
+        }
+
+        function generateWeeklyRequest() {
+            const partTypes = ['Head', 'Body', 'Wing', 'Tail', 'Leg', 'Arm', 'Eye', 'Horn'];
+            const families = ['Bird', 'Beast', 'Dragon', 'Aquatic', 'Insect', 'Plant', 'Undead', 'Elemental'];
+            const quantity = Math.floor(Math.random() * 4); // 0-3 parts
+            const partType = partTypes[Math.floor(Math.random() * partTypes.length)];
+            const family = families[Math.floor(Math.random() * families.length)];
+            const reward = 2.0 + (quantity * 0.1); // Base 2.0x + 0.1x per part
+            
+            const description = quantity === 0 ? 
+                `Need any parts from ${family} family monsters` :
+                `Need ${quantity}x ${partType} parts from ${family} family monsters`;
+            
+            return {
+                description: description,
+                reward: reward,
+                checkFunction: (monster) => {
+                    if (!monster.creation_data) return false;
+                    const data = JSON.parse(monster.creation_data);
+                    if (!data.placedParts) return false;
+                    
+                    if (quantity === 0) {
+                        // Any parts from family
+                        return data.placedParts.some(part => {
+                            const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                            return partData && partData.family && partData.family.toLowerCase() === family.toLowerCase();
+                        });
+                    } else {
+                        // Specific part type from family
                         return data.placedParts.filter(part => {
                             const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
-                            return partData && partData.family === family && part.name.toLowerCase().includes(partType.toLowerCase());
+                            return partData && partData.family && partData.family.toLowerCase() === family.toLowerCase() && part.name.toLowerCase().includes(partType.toLowerCase());
                         }).length >= quantity;
                     }
-                };
-            } else {
-                return {
-                    description: `Need ${quantity}x ${partType} parts from any monster`,
-                    reward: reward,
-                    checkFunction: (monster) => {
-                        if (!monster.creation_data) return false;
-                        const data = JSON.parse(monster.creation_data);
-                        if (!data.placedParts) return false;
-                        return data.placedParts.filter(part => 
-                            part.name.toLowerCase().includes(partType.toLowerCase())
-                        ).length >= quantity;
-                    }
-                };
-            }
+                }
+            };
         }
 
         function loadRequests() {
             const stored = localStorage.getItem('currentRequests');
             if (stored) {
                 const requests = JSON.parse(stored);
+                // Check if we have the correct number of requests (4: 3 daily + 1 weekly)
+                if (requests.length !== 4) {
+                    // Reset to new structure
+                    const newRequests = [
+                        generateRandomRequest(), // Daily 1
+                        generateRandomRequest(), // Daily 2  
+                        generateRandomRequest(), // Daily 3
+                        generateWeeklyRequest()  // Weekly
+                    ];
+                    localStorage.setItem('currentRequests', JSON.stringify(newRequests.map(r => ({description: r.description, reward: r.reward}))));
+                    return newRequests;
+                }
                 return requests.map(req => ({
                     ...req,
                     checkFunction: generateCheckFunction(req.description, req.reward)
                 }));
             }
-            return [generateRandomRequest(), generateRandomRequest()];
+            // Generate 3 daily + 1 weekly request and save them
+            const newRequests = [
+                generateRandomRequest(), // Daily 1
+                generateRandomRequest(), // Daily 2  
+                generateRandomRequest(), // Daily 3
+                generateWeeklyRequest()  // Weekly
+            ];
+            localStorage.setItem('currentRequests', JSON.stringify(newRequests.map(r => ({description: r.description, reward: r.reward}))));
+            return newRequests;
         }
 
         function generateCheckFunction(description, reward) {
@@ -706,7 +969,7 @@
                         if (!data.placedParts) return false;
                         return data.placedParts.filter(part => {
                             const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
-                            return partData && partData.family === family && part.name.toLowerCase().includes(partType.toLowerCase());
+                            return partData && partData.family && partData.family.toLowerCase() === family.toLowerCase() && part.name.toLowerCase().includes(partType.toLowerCase());
                         }).length >= quantity;
                     };
                 } else { // any monster
@@ -726,47 +989,108 @@
         }
 
         let currentRequests = loadRequests();
+        let requestTimers = JSON.parse(localStorage.getItem('requestTimers')) || {};
+        let rerollCosts = JSON.parse(localStorage.getItem('rerollCosts')) || { daily_0: 0, daily_1: 0, daily_2: 0, weekly: 0 };
+        let fulfilledRequests = JSON.parse(localStorage.getItem('fulfilledRequests')) || {};
+        
+        function initializeTimers() {
+            const now = Date.now();
+            
+            // Initialize daily timers (1 minute for first daily, 59m59s for others)
+            for (let i = 0; i < 3; i++) {
+                if (!requestTimers[`daily_${i}`]) {
+                    requestTimers[`daily_${i}`] = now + (i === 0 ? 60 * 1000 : 59 * 60 * 1000 + 59 * 1000);
+                }
+            }
+            
+            // Initialize weekly timer (24 hours)
+            if (!requestTimers['weekly']) {
+                requestTimers['weekly'] = now + (24 * 60 * 60 * 1000);
+            }
+            
+            localStorage.setItem('requestTimers', JSON.stringify(requestTimers));
+        }
 
         function refreshRequest(requestIndex) {
-            const newRequest = generateRandomRequest();
+            const costKey = requestIndex < 3 ? `daily_${requestIndex}` : 'weekly';
+            const cost = rerollCosts[costKey];
+            
+            if (cost > 0 && gold < cost) {
+                showToast(`Need ${cost}G to reroll!`);
+                return;
+            }
+            
+            if (cost > 0) {
+                gold -= cost;
+                updateGold();
+            }
+            
+            // Update cost for next reroll
+            rerollCosts[costKey] = cost === 0 ? 5 : cost * 2;
+            localStorage.setItem('rerollCosts', JSON.stringify(rerollCosts));
+            
+            let newRequest;
+            if (requestIndex < 3) {
+                // Daily request - reset timer (1 minute for first daily, 59m59s for others)
+                newRequest = generateRandomRequest();
+                requestTimers[`daily_${requestIndex}`] = Date.now() + (requestIndex === 0 ? 60 * 1000 : 59 * 60 * 1000 + 59 * 1000);
+            } else {
+                // Weekly request - reset timer to 24 hours
+                newRequest = generateWeeklyRequest();
+                requestTimers['weekly'] = Date.now() + (24 * 60 * 60 * 1000);
+            }
             currentRequests[requestIndex] = newRequest;
             localStorage.setItem('currentRequests', JSON.stringify(currentRequests.map(r => ({description: r.description, reward: r.reward}))));
+            localStorage.setItem('requestTimers', JSON.stringify(requestTimers));
             currentRequests = loadRequests();
             updateRequests();
         }
 
         async function updateRequests() {
-            const response = await fetch('/api/creations?source=part-maker');
+            const response = await fetch('/api/creations');
             const creations = await response.json();
-            const userName = localStorage.getItem('userName');
+            const userName = localStorage.getItem('userName') || 'Anonymous';
             const userMonsters = creations.filter(creation => creation.author === userName);
             
             let requestsHtml = '';
             
             for (let i = 0; i < currentRequests.length; i++) {
                 const request = currentRequests[i];
-                let requestHtml = `<div class="rpgui-container framed-grey" style="margin: 10px 0; padding: 15px; position: relative;">
-                    <div class="rpgui-container framed" onclick="refreshRequest(${i})" style="cursor: url('/RPGUI/img/cursor/point.png'), pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; position: absolute; top: 10px; right: 10px;"><p>↻</p></div>
-                    <p><strong>Request #${i + 1}:</strong> ${request.description}</p>
-                    <p><strong>Reward:</strong> ${request.reward}x Base Value</p>
+                const costKey = i < 3 ? `daily_${i}` : 'weekly';
+                const isFulfilled = fulfilledRequests[costKey];
+                const canMake = !isFulfilled && canMakeRequestMonster(request);
+                const rerollCost = rerollCosts[costKey];
+                const rerollText = rerollCost === 0 ? '🎲' : `${rerollCost}G`;
+                
+                let requestHtml = `<div class="rpgui-container framed-grey" style="margin: 10px 0; padding: 15px 60px 15px 15px; position: relative; ${isFulfilled ? 'opacity: 0.7;' : ''}">
+                    ${isFulfilled ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; color: #4CAF50; z-index: 10;">✓</div>' : ''}
+                    ${!isFulfilled ? `<div class="rpgui-container framed" onclick="refreshRequest(${i})" style="cursor: url('/RPGUI/img/cursor/point.png'), pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; position: absolute; top: 10px; right: 10px; border-image-width: 12px; font-size: ${rerollCost === 0 ? 'x-large' : '8px'};"><p>${rerollText}</p></div>` : ''}
+                    ${isFulfilled ? '<div style="position: absolute; top: 10px; right: 10px; font-size: 10px; color: white; text-align: center; width: 80px;">Time until new request:</div>' : ''}
+                    <div id="timer-${i}" style="position: absolute; top: 65px; right: 25px; width: 30px; text-align: center; font-size: 10px;"></div>
+                    <p><strong>${i < 3 ? 'Daily' : 'Weekly'} Request #${i < 3 ? i + 1 : 1}:</strong> ${request.description}</p>
+                    <p><strong>Reward:</strong> ${request.reward.toFixed(1)}x Base Value</p>
+                    ${isFulfilled ? '<p style="color: #4CAF50; font-size: 12px; margin-top: 5px;">This request has been fulfilled!</p>' : ''}
+                    ${canMake ? '<p style="color: #f4d03f; font-size: 12px; margin-top: 5px;">✓ You have the parts to make this!</p>' : ''}
 `;
                 
                 let hasEligible = false;
                 
-                for (const monster of userMonsters) {
-                    if (request.checkFunction(monster)) {
-                        hasEligible = true;
-                        const baseValue = calculateMonsterValue(monster);
-                        const sellValue = Math.floor(baseValue * request.reward);
-                        requestHtml += `<div style="display: inline-block; margin: 10px; text-align: center;">
-                            <img src="${await getMonsterImage(monster)}" style="width: 64px; height: 64px; image-rendering: pixelated;">
-                            <p>${monster.name}</p>
-                            <button class="rpgui-button" onclick="sellMonster('${monster.id}', ${sellValue})"><p>SELL ${sellValue}G</p></button>
-                        </div>`;
+                if (!isFulfilled) {
+                    for (const monster of userMonsters) {
+                        if (request.checkFunction(monster)) {
+                            hasEligible = true;
+                            const baseValue = calculateMonsterValue(monster);
+                            const sellValue = Math.floor(baseValue * request.reward);
+                            requestHtml += `<div style="display: inline-block; margin: 10px; text-align: center;">
+                                <img src="${await getMonsterImage(monster)}" style="width: 64px; height: 64px; image-rendering: pixelated;">
+                                <p>${monster.name}</p>
+                                <button class="rpgui-button" onclick="sellMonster('${monster.id}', ${sellValue})"><p>SELL ${sellValue}G</p></button>
+                            </div>`;
+                        }
                     }
                 }
                 
-                if (!hasEligible) {
+                if (!hasEligible && !isFulfilled) {
                     requestHtml += '<p style="color: red; margin-top: 5px;">No eligible monsters</p>';
                 }
                 
@@ -775,24 +1099,101 @@
             }
             
             document.getElementById('requests-section').innerHTML = requestsHtml;
+            updateTimers();
+        }
+        
+        function updateTimers() {
+            const now = Date.now();
             
-
+            for (let i = 0; i < 4; i++) {
+                const timerKey = i < 3 ? `daily_${i}` : 'weekly';
+                const endTime = requestTimers[timerKey];
+                const timerElement = document.getElementById(`timer-${i}`);
+                
+                if (!timerElement || !endTime) continue;
+                
+                const timeLeft = Math.max(0, endTime - now);
+                
+                if (timeLeft === 0) {
+                    // Timer expired, refresh request without increasing cost and clear fulfilled status
+                    const costKey = i < 3 ? `daily_${i}` : 'weekly';
+                    delete fulfilledRequests[costKey];
+                    rerollCosts[costKey] = 0;
+                    localStorage.setItem('fulfilledRequests', JSON.stringify(fulfilledRequests));
+                    localStorage.setItem('rerollCosts', JSON.stringify(rerollCosts));
+                    
+                    let newRequest;
+                    if (i < 3) {
+                        newRequest = generateRandomRequest();
+                        requestTimers[`daily_${i}`] = now + (i === 0 ? 60 * 1000 : 59 * 60 * 1000 + 59 * 1000);
+                    } else {
+                        newRequest = generateWeeklyRequest();
+                        requestTimers['weekly'] = now + (24 * 60 * 60 * 1000);
+                    }
+                    
+                    currentRequests[i] = newRequest;
+                    localStorage.setItem('currentRequests', JSON.stringify(currentRequests.map(r => ({description: r.description, reward: r.reward}))));
+                    localStorage.setItem('requestTimers', JSON.stringify(requestTimers));
+                    currentRequests = loadRequests();
+                    updateRequests();
+                    continue;
+                }
+                
+                const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                
+                // Calculate progress percentage
+                const totalTime = i < 3 ? (i === 0 ? 60 * 1000 : 59 * 60 * 1000 + 59 * 1000) : (24 * 60 * 60 * 1000);
+                const progress = Math.max(0, Math.min(100, ((totalTime - timeLeft) / totalTime) * 100));
+                
+                timerElement.innerHTML = `
+                    <div style="font-size: 8px; color: white;">${i < 3 ? `${minutes}m ${seconds}s` : `${hours}h ${minutes}m`}</div>
+                    <div style="width: 30px; height: 4px; background: #333; border: 1px solid #666; margin: 2px auto;">
+                        <div style="width: ${progress}%; height: 100%; background: #4CAF50;"></div>
+                    </div>
+                `;
+            }
         }
         
         function calculateMonsterValue(monster) {
-            let totalValue = 0;
+            let baseValue = 0;
             if (monster.creation_data) {
                 const data = JSON.parse(monster.creation_data);
                 if (data.placedParts) {
+                    // Calculate base value
                     data.placedParts.forEach(part => {
                         const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
                         if (partData) {
-                            totalValue += Math.floor(partData.rarity * 10);
+                            const rarityValues = { 'common': 1, 'uncommon': 1.5, 'rare': 2, 'epic': 2.5, 'legendary': 3, 'mythic': 4 };
+                            const rarityValue = rarityValues[partData.rarity] || 1;
+                            const partValue = Math.floor(rarityValue * 10);
+                            if (!isNaN(partValue)) {
+                                baseValue += partValue;
+                            }
                         }
                     });
+                    
+                    // Calculate same-monster bonuses
+                    const monsterCounts = {};
+                    data.placedParts.forEach(part => {
+                        const key = `${part.name}-${part.monster}`;
+                        if (!monsterCounts[part.monster]) monsterCounts[part.monster] = new Set();
+                        monsterCounts[part.monster].add(key);
+                    });
+                    
+                    let bonusMultiplier = 0;
+                    Object.values(monsterCounts).forEach(uniqueParts => {
+                        const count = uniqueParts.size;
+                        if (count >= 2) {
+                            bonusMultiplier += 0.1 + (count - 2) * 0.2;
+                        }
+                    });
+                    
+                    baseValue = Math.floor(baseValue * (1 + bonusMultiplier));
                 }
             }
-            return totalValue;
+            return baseValue || 0;
         }
         
         async function getMonsterImage(monster) {
@@ -816,6 +1217,15 @@
                     if (response.ok) {
                         gold += sellValue;
                         updateGold();
+                        
+                        // Mark request as fulfilled
+                        const requestIndex = findRequestIndexForSale();
+                        if (requestIndex !== -1) {
+                            const requestKey = requestIndex < 3 ? `daily_${requestIndex}` : 'weekly';
+                            fulfilledRequests[requestKey] = true;
+                            localStorage.setItem('fulfilledRequests', JSON.stringify(fulfilledRequests));
+                        }
+                        
                         updateRequests();
                         loadCreatedMonsters();
                         alert(`Monster sold for ${sellValue}G!`);
@@ -825,16 +1235,57 @@
                 }
             }
         }
+        
+        function findRequestIndexForSale() {
+            for (let i = 0; i < currentRequests.length; i++) {
+                const requestKey = i < 3 ? `daily_${i}` : 'weekly';
+                if (!fulfilledRequests[requestKey]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
 
         function closeMonsterPreview() {
             document.getElementById('monster-preview-modal').style.display = 'none';
+            currentPreviewMonster = null;
+        }
+        
+        async function sellMonsterFromPreview() {
+            if (!currentPreviewMonster) return;
+            
+            const baseValue = parseInt(document.getElementById('preview-monster-value').textContent);
+            if (confirm(`Sell ${currentPreviewMonster.name} for ${baseValue}G?`)) {
+                try {
+                    const response = await fetch(`/api/creations/${currentPreviewMonster.id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        gold += baseValue;
+                        updateGold();
+                        loadCreatedMonsters();
+                        closeMonsterPreview();
+                        showToast(`Sold ${currentPreviewMonster.name} for ${baseValue}G!`);
+                    }
+                } catch (error) {
+                    console.error('Error selling monster:', error);
+                }
+            }
+        }
+        
+        function addGold() {
+            gold += 100;
+            updateGold();
+            showToast('Added 100 gold!');
         }
         // Initialize
         loadParts().then(() => {
+            initializeTimers();
             updateGold();
             updateInventory();
             loadCreatedMonsters();
             updateRequests();
+            
+            // Update timers every second for daily requests, every minute for weekly
+            setInterval(updateTimers, 1000);
         });
     </script>
 </body>

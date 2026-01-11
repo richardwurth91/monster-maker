@@ -4,19 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Part Combiner</title>
+    <link rel="stylesheet" href="/RPGUI/rpgui.css">
+    <script src="/RPGUI/rpgui.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f0f0f0;
+        body { 
+            background: #2a4d3a; 
+            margin: 0;
+            padding: 0;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
+        .main-container {
+            display: flex;
+            gap: 20px;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .main-container > div {
+            width: 33vw;
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
         }
         .part-selector {
             display: flex;
@@ -25,15 +32,7 @@
         }
         .part-input {
             flex: 1;
-            padding: 20px;
-            border: 2px dashed #ccc;
-            border-radius: 10px;
             text-align: center;
-            background: #f9f9f9;
-        }
-        .part-input.has-part {
-            border-color: #4CAF50;
-            background: #e8f5e8;
         }
         select {
             width: 100%;
@@ -42,29 +41,11 @@
             border: 1px solid #ddd;
             border-radius: 5px;
         }
-        button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
+        .part-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
             border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background: #45a049;
-        }
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .breed-preview {
-            margin-top: 20px;
-            padding: 20px;
-            border: 2px solid #2196F3;
-            border-radius: 10px;
-            background: #e3f2fd;
-            display: none;
         }
         .breed-option {
             display: flex;
@@ -79,22 +60,6 @@
         .breed-info {
             flex: 1;
         }
-        .select-btn {
-            background: #2196F3;
-            padding: 8px 16px;
-            font-size: 14px;
-        }
-        .select-btn:hover {
-            background: #1976D2;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 20px;
-            border: 2px solid #4CAF50;
-            border-radius: 10px;
-            background: #e8f5e8;
-            display: none;
-        }
         .error {
             color: red;
             font-weight: bold;
@@ -103,66 +68,153 @@
             color: green;
             font-weight: bold;
         }
-        .part-info {
-            margin: 10px 0;
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 5px;
-        }
-        .breeding-info {
-            margin-top: 10px;
-            padding: 10px;
-            background: #e0e0e0;
-            border-radius: 5px;
+        .rarity-common { background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-left: 4px solid #6c757d; }
+        .rarity-uncommon { background: linear-gradient(135deg, #d4edda, #c3e6cb); border-left: 4px solid #28a745; }
+        .rarity-rare { background: linear-gradient(135deg, #d1ecf1, #bee5eb); border-left: 4px solid #17a2b8; }
+        .rarity-epic { background: linear-gradient(135deg, #e2e3f1, #d1d2e8); border-left: 4px solid #6f42c1; }
+        .rarity-legendary { background: linear-gradient(135deg, #fff3cd, #ffeaa7); border-left: 4px solid #ffc107; }
+        .rarity-mythic { background: linear-gradient(135deg, #f8d7da, #f1b0b7); border-left: 4px solid #dc3545; }
+        .inventory-part .part-name {
             font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 5px;
+            font-family: 'Press Start 2P', cursive;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border: 2px solid #0f380f;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            z-index: 3000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .chop-container button,
+        .chop-container img {
+            transition: transform 0.2s ease;
+        }
+        .chop-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .chop-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .maker-container button,
+        .maker-container img {
+            transition: transform 0.2s ease;
+        }
+        .maker-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .maker-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .bottom-right-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .bottom-right-buttons .rpgui-button p {
+            font-family: 'Press Start 2P', cursive;
+            color: white;
+            text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Part Combiner</h1>
-        <p>Combine two monster parts to create a new part based on breeding rules.</p>
-        
-        <div class="part-selector">
-            <div class="part-input" id="partA">
-                <h3>Part A</h3>
-                <select id="monsterA">
-                    <option value="">Select Monster</option>
-                </select>
-                <select id="partTypeA" disabled>
-                    <option value="">Select Part</option>
-                </select>
-                <div class="part-info" id="infoA"></div>
+    <div class="rpgui-content">
+        <div class="main-container">
+            <div class="rpgui-container framed primary-window">
+                <h1>Part Combiner</h1>
+                <p>Combine two monster parts to create a new part based on breeding rules.</p>
+                
+                <div class="part-selector">
+                    <div class="part-input rpgui-container framed-grey">
+                        <h3>Part A</h3>
+                        <div id="partPreviewA" class="part-preview" onclick="openPartSelector('A')" style="width: 90px; height: 90px; border: 4px solid #8b4513; background: #f9f9f9; margin: 10px auto; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; font-weight: bolder;">No part selected</div>
+                        <button class="rpgui-button" onclick="openPartSelector('A')" style="width: 100%; height: 70px;"><p>Choose Part</p></button>
+                        <div class="part-info" id="infoA" style="display: none;"></div>
+                    </div>
+                    
+                    <div class="part-input rpgui-container framed-grey">
+                        <h3>Part B</h3>
+                        <div id="partPreviewB" class="part-preview" onclick="openPartSelector('B')" style="width: 90px; height: 90px; border: 4px solid #8b4513; background: #f9f9f9; margin: 10px auto; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; font-weight: bolder;">No part selected</div>
+                        <button class="rpgui-button" onclick="openPartSelector('B')" style="width: 100%; height: 70px;"><p>Choose Part</p></button>
+                        <div class="part-info" id="infoB" style="display: none;"></div>
+                    </div>
+                </div>
             </div>
             
-            <div class="part-input" id="partB">
-                <h3>Part B</h3>
-                <select id="monsterB">
-                    <option value="">Select Monster</option>
-                </select>
-                <select id="partTypeB" disabled>
-                    <option value="">Select Part</option>
-                </select>
-                <div class="part-info" id="infoB"></div>
+            <div class="rpgui-container framed" id="breedPreview" style="display: none;">
+                <h3>Possible Breeds</h3>
+                <div id="breedOptions"></div>
+            </div>
+            
+            <div class="rpgui-container framed" id="result" style="display: none;">
+                <h3>Result</h3>
+                <div id="resultContent"></div>
+            </div>
+            
+            <div class="rpgui-container framed" id="reverseLookup">
+                <h3>Reverse Parts Lookup</h3>
+                <div id="reverseLookupUnlocked" style="display: none;">
+                    <p>All possible monster outcomes from your inventory:</p>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
+                        <button class="rpgui-button" onclick="sortReverseLookup('name')"><p>Name</p></button>
+                        <button class="rpgui-button" onclick="sortReverseLookup('rarity')"><p>Rarity</p></button>
+                        <button class="rpgui-button" onclick="toggleSortOrder()" id="sortOrderBtn"><p>↑ Asc</p></button>
+                    </div>
+                    <div id="reverseLookupContent" style="max-height: 400px; overflow-y: auto;"></div>
+                </div>
+                <div id="reverseLookupLocked" style="text-align: center; padding: 20px;">
+                    <p>🔒 Feature Locked</p>
+                    <p>Unlock advanced breeding analysis for 1000G</p>
+                    <button class="rpgui-button" onclick="unlockReverseLookup()" id="unlockBtn"><p>UNLOCK (1000G)</p></button>
+                </div>
             </div>
         </div>
-        
-        <div class="breed-preview" id="breedPreview">
-            <h3>Possible Breeds</h3>
-            <div id="breedOptions"></div>
-        </div>
-        
-        <div class="result" id="result">
-            <h3>Result</h3>
-            <div id="resultContent"></div>
+    </div>
+
+    <!-- Part Selector Modal -->
+    <div id="part-selector-modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div class="rpgui-content">
+            <div class="rpgui-container framed" style="margin: 5% auto !important; width: 90% !important; max-width: 800px !important; max-height: 80vh !important; overflow-y: auto !important; position: relative !important;">
+                <span onclick="closePartSelector()" style="position: absolute !important; top: 15px !important; right: 25px !important; font-size: 35px !important; font-weight: bold !important; color: white !important; cursor: pointer !important; z-index: 10 !important;">&times;</span>
+                <h2 id="part-selector-title" style="text-align: center !important; color: white !important; margin-bottom: 20px !important;">Select Part</h2>
+                <div id="part-selector-grid" style="display: grid !important; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important; gap: 10px !important; max-height: 400px !important; overflow-y: auto !important; padding: 10px !important; margin: 0 20px !important;"></div>
+            </div>
         </div>
     </div>
 
     <script>
         let monsterData = {};
         let breedingData = [];
+        let selectedPartA = null;
+        let selectedPartB = null;
+        let currentPartSelector = null;
+        let allParts = [];
+        let sortBy = 'name';
+        let sortAscending = true;
+        let discoveredMonsters = JSON.parse(localStorage.getItem('discoveredMonsters')) || [];
+        let reverseLookupUnlocked = localStorage.getItem('reverseLookupUnlocked') === 'true';
         
-        // Load monster data and breeding rules
         async function loadData() {
             try {
                 const response = await fetch('../assets/data/monster-data.xml');
@@ -212,7 +264,7 @@
                 });
                 
                 await loadMonsterParts();
-                populateMonsterSelects();
+                updateReverseLookupDisplay();
                 
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -223,6 +275,10 @@
             try {
                 const response = await fetch('/api/monsters');
                 const monsters = await response.json();
+                
+                // Load inventory from localStorage (same as part-shop)
+                const inventory = JSON.parse(localStorage.getItem('partInventory')) || [];
+                allParts = inventory; // Use existing inventory instead of all parts
                 
                 monsters.forEach(monster => {
                     if (monsterData[monster.name]) {
@@ -236,11 +292,118 @@
                             }
                         }
                         monsterData[monster.name].parts = parts;
+                        monsterData[monster.name].rarity = monster.rarity || 1;
                     }
                 });
+                
+                updateReverseLookup();
             } catch (error) {
                 console.error('Failed to load parts from database:', error);
             }
+        }
+        
+        function updateReverseLookupDisplay() {
+            const unlockedDiv = document.getElementById('reverseLookupUnlocked');
+            const lockedDiv = document.getElementById('reverseLookupLocked');
+            const unlockBtn = document.getElementById('unlockBtn');
+            
+            if (reverseLookupUnlocked) {
+                unlockedDiv.style.display = 'block';
+                lockedDiv.style.display = 'none';
+                updateReverseLookup();
+            } else {
+                unlockedDiv.style.display = 'none';
+                lockedDiv.style.display = 'block';
+                
+                const gold = parseInt(localStorage.getItem('gold')) || 0;
+                unlockBtn.disabled = gold < 1000;
+                unlockBtn.style.opacity = gold < 1000 ? '0.5' : '1';
+                if (gold < 1000) {
+                    unlockBtn.innerHTML = '<p>UNLOCK (1000G) - Need More Gold</p>';
+                } else {
+                    unlockBtn.innerHTML = '<p>UNLOCK (1000G)</p>';
+                }
+            }
+        }
+        
+        function unlockReverseLookup() {
+            const gold = parseInt(localStorage.getItem('gold')) || 0;
+            if (gold < 1000) {
+                showToast('Need 1000G to unlock this feature!');
+                return;
+            }
+            
+            localStorage.setItem('gold', gold - 1000);
+            localStorage.setItem('reverseLookupUnlocked', 'true');
+            reverseLookupUnlocked = true;
+            
+            showToast('Reverse Parts Lookup unlocked!');
+            updateReverseLookupDisplay();
+        }
+        
+        function getRarityClass(rarity) {
+            if (rarity === 'mythic') return 'rarity-mythic';
+            if (rarity === 'legendary') return 'rarity-legendary';
+            if (rarity === 'epic') return 'rarity-epic';
+            if (rarity === 'rare') return 'rarity-rare';
+            if (rarity === 'uncommon') return 'rarity-uncommon';
+            return 'rarity-common';
+        }
+        
+        function getRarityName(rarity) {
+            if (rarity === 'mythic') return 'Mythic';
+            if (rarity === 'legendary') return 'Legendary';
+            if (rarity === 'epic') return 'Epic';
+            if (rarity === 'rare') return 'Rare';
+            if (rarity === 'uncommon') return 'Uncommon';
+            return 'Common';
+        }
+        
+        function autoCropImage(imageData) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const pixels = data.data;
+                    
+                    let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                    
+                    for (let y = 0; y < canvas.height; y++) {
+                        for (let x = 0; x < canvas.width; x++) {
+                            const alpha = pixels[(y * canvas.width + x) * 4 + 3];
+                            if (alpha > 0) {
+                                minX = Math.min(minX, x);
+                                minY = Math.min(minY, y);
+                                maxX = Math.max(maxX, x);
+                                maxY = Math.max(maxY, y);
+                            }
+                        }
+                    }
+                    
+                    if (minX < canvas.width) {
+                        const cropWidth = maxX - minX + 1;
+                        const cropHeight = maxY - minY + 1;
+                        
+                        const cropCanvas = document.createElement('canvas');
+                        const cropCtx = cropCanvas.getContext('2d');
+                        cropCanvas.width = cropWidth;
+                        cropCanvas.height = cropHeight;
+                        
+                        cropCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+                        resolve(cropCanvas.toDataURL());
+                    } else {
+                        resolve(imageData);
+                    }
+                };
+                img.src = imageData;
+            });
         }
         
         function populateMonsterSelects() {
@@ -259,50 +422,109 @@
             });
         }
         
-        function onMonsterSelect(selectId, partSelectId, infoId) {
-            const monster = document.getElementById(selectId).value;
-            const partSelect = document.getElementById(partSelectId);
-            const info = document.getElementById(infoId);
+        function openPartSelector(slot) {
+            currentPartSelector = slot;
+            document.getElementById('part-selector-title').textContent = `Select Part ${slot}`;
+            document.getElementById('part-selector-modal').style.display = 'block';
+            populatePartGrid();
             
-            // Clear previous parts
-            partSelect.innerHTML = '<option value="">Select Part</option>';
-            partSelect.disabled = !monster;
-            
-            if (monster && monsterData[monster]) {
-                const parts = monsterData[monster].parts || [];
-                if (Array.isArray(parts)) {
-                    parts.forEach(part => {
-                        partSelect.add(new Option(part, part));
-                    });
-                }
-                
-                info.innerHTML = `<strong>Family:</strong> ${monsterData[monster].family}`;
-            } else {
-                info.innerHTML = '';
+            if (tutorialActive && tutorialSteps[tutorialStep]?.action === 'click') {
+                nextTutorialStep();
             }
-            
-            checkCombineReady();
         }
         
-        function onPartSelect() {
+        function closePartSelector() {
+            document.getElementById('part-selector-modal').style.display = 'none';
+        }
+        
+        function populatePartGrid() {
+            const grid = document.getElementById('part-selector-grid');
+            grid.innerHTML = '';
+            
+            if (allParts.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: white; padding: 20px;">No parts in inventory. Visit the shop to buy parts!</p>';
+                return;
+            }
+            
+            allParts.forEach((part, index) => {
+                const item = document.createElement('div');
+                item.className = `inventory-part ${getRarityClass(part.rarity)}`;
+                item.style.cssText = 'border: 2px solid #ddd; padding: 10px; text-align: center; cursor: pointer;';
+                item.onclick = () => selectPart(part);
+                
+                // Auto-crop the part image
+                autoCropImage(part.sprite).then(croppedSprite => {
+                    const img = document.createElement('img');
+                    img.src = croppedSprite;
+                    img.style.cssText = 'width: 32px; height: 32px; image-rendering: pixelated;';
+                    item.appendChild(img);
+                    
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'part-name';
+                    nameDiv.textContent = part.name;
+                    item.appendChild(nameDiv);
+                    
+                    const monsterDiv = document.createElement('div');
+                    monsterDiv.className = 'part-monster';
+                    monsterDiv.textContent = `${part.monster} - ${part.family}`;
+                    item.appendChild(monsterDiv);
+                    
+                    const rarityDiv = document.createElement('div');
+                    rarityDiv.className = 'part-monster';
+                    rarityDiv.textContent = getRarityName(part.rarity);
+                    item.appendChild(rarityDiv);
+                });
+                
+                grid.appendChild(item);
+            });
+        }
+        
+        function selectPart(part) {
+            if (currentPartSelector === 'A') {
+                selectedPartA = part;
+                updatePartPreview('A', part);
+            } else {
+                selectedPartB = part;
+                updatePartPreview('B', part);
+            }
+            closePartSelector();
             checkCombineReady();
+            
+            if (tutorialActive && tutorialSteps[tutorialStep]?.action === 'click') {
+                nextTutorialStep();
+            }
+        }
+        
+        function updatePartPreview(slot, part) {
+            const preview = document.getElementById(`partPreview${slot}`);
+            const info = document.getElementById(`info${slot}`);
+            
+            autoCropImage(part.sprite).then(croppedSprite => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 90;
+                    canvas.height = 90;
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(img, 0, 0, 90, 90);
+                    preview.innerHTML = '';
+                    preview.appendChild(canvas);
+                };
+                img.src = croppedSprite;
+            });
+            
+            info.innerHTML = `<strong>Part:</strong> ${part.name}<br><strong>From:</strong> ${part.monster} (${part.family})`;
+            info.className = `part-info ${getRarityClass(part.rarity)}`;
+            info.style.display = 'block';
         }
         
         function checkCombineReady() {
-            const monsterA = document.getElementById('monsterA').value;
-            const partA = document.getElementById('partTypeA').value;
-            const monsterB = document.getElementById('monsterB').value;
-            const partB = document.getElementById('partTypeB').value;
-            
-            const ready = monsterA && partA && monsterB && partB;
-            
-            // Update visual feedback
-            document.getElementById('partA').classList.toggle('has-part', monsterA && partA);
-            document.getElementById('partB').classList.toggle('has-part', monsterB && partB);
+            const ready = selectedPartA && selectedPartB;
             
             // Show breed preview if both parts selected
             if (ready) {
-                showBreedPreview(monsterA, monsterB);
+                showBreedPreview(selectedPartA.monster, selectedPartB.monster);
             } else {
                 document.getElementById('breedPreview').style.display = 'none';
                 document.getElementById('result').style.display = 'none';
@@ -310,8 +532,8 @@
         }
         
         function findAllBreedingResults(monsterA, monsterB) {
-            const familyA = monsterData[monsterA].family;
-            const familyB = monsterData[monsterB].family;
+            const familyA = monsterData[monsterA]?.family || 'Unknown';
+            const familyB = monsterData[monsterB]?.family || 'Unknown';
             
             const matches = [];
             
@@ -370,15 +592,6 @@
             });
         }
         
-        function getRandomPart(monster) {
-            if (!monsterData[monster] || !monsterData[monster].parts.length) {
-                console.warn(`No parts available for ${monster}`);
-                return 'Unknown Part';
-            }
-            const parts = monsterData[monster].parts;
-            return parts[Math.floor(Math.random() * parts.length)];
-        }
-        
         function showBreedPreview(monsterA, monsterB) {
             const matches = findAllBreedingResults(monsterA, monsterB);
             const previewDiv = document.getElementById('breedPreview');
@@ -387,15 +600,28 @@
             if (matches.length > 0) {
                 optionsDiv.innerHTML = matches.map(match => {
                     const family = monsterData[match.target] ? monsterData[match.target].family : 'Unknown';
+                    const rarity = monsterData[match.target] ? monsterData[match.target].rarity : 'common';
+                    const rarityClass = getRarityClass(rarity);
+                    
+                    // Check if this is a rarity upgrade
+                    const rarityOrder = { 'common': 1, 'uncommon': 2, 'rare': 3, 'epic': 4, 'legendary': 5, 'mythic': 6 };
+                    const resultRarityLevel = rarityOrder[rarity] || 1;
+                    const parentARarityLevel = rarityOrder[selectedPartA.rarity] || 1;
+                    const parentBRarityLevel = rarityOrder[selectedPartB.rarity] || 1;
+                    const maxParentRarityLevel = Math.max(parentARarityLevel, parentBRarityLevel);
+                    const isRarityUpgrade = resultRarityLevel > maxParentRarityLevel;
+                    const upgradeIcon = isRarityUpgrade ? '<span style="color: red; font-weight: bold; margin-left: 10px;">↑</span>' : '';
+                    
+                    const isDiscovered = isMonsterDiscovered(match.target);
+                    const displayName = isDiscovered ? match.target : '???????';
+                    const displayFamily = isDiscovered ? family : '???????';
+                    
                     return `
-                        <div class="breed-option">
+                        <div class="breed-option ${rarityClass}">
                             <div class="breed-info">
-                                <strong>${match.target}</strong> (${family})<br>
-                                <small>Match Score: ${match.score}</small>
+                                <strong>${displayName}</strong> (${displayFamily})${upgradeIcon}
                             </div>
-                            <button class="select-btn" onclick="selectBreed('${match.target}')">
-                                Select
-                            </button>
+                            <button class="rpgui-button" onclick="selectBreed('${match.target}')"><p>Select</p></button>
                         </div>
                     `;
                 }).join('');
@@ -412,49 +638,587 @@
             previewDiv.style.display = 'block';
         }
         
-        function selectBreed(resultMonster) {
-            const monsterA = document.getElementById('monsterA').value;
-            const partA = document.getElementById('partTypeA').value;
-            const monsterB = document.getElementById('monsterB').value;
-            const partB = document.getElementById('partTypeB').value;
+        function showRedArrowTutorial() {
+            console.log('showRedArrowTutorial called');
+            const modal = document.getElementById('tutorial-content');
+            console.log('modal element:', modal);
+            modal.innerHTML = `
+                <img src="/assets/icons/misc/other/old_man_idle_animation.gif" style="image-rendering: pixelated; margin-bottom: 20px; object-fit: contain; width: 100px; height: 100px;" alt="Old Man">
+                <div style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
+                    The red arrow ↑ means this result has higher rarity than your input parts! 
+                    Your common parts (Slime + Dracky) can create an uncommon WingSlime - that's a rarity upgrade!
+                </div>
+                <button class="rpgui-button" onclick="continueFromRedArrow()"><p>Got it!</p></button>
+            `;
+            document.getElementById('tutorial-modal').style.display = 'block';
+            console.log('Modal should be visible now');
+        }
+        
+        function continueFromRedArrow() {
+            closeTutorial();
+        }
+        
+        async function selectBreed(resultMonster) {
+            if (tutorialActive && tutorialSteps[tutorialStep]?.action === 'click') {
+                nextTutorialStep();
+            }
+            
+            if (!selectedPartA || !selectedPartB) return;
             
             const resultDiv = document.getElementById('result');
             const resultContent = document.getElementById('resultContent');
             
             let resultPart;
-            if (partA.toLowerCase() === partB.toLowerCase() && monsterData[resultMonster] && 
-                monsterData[resultMonster].parts.some(p => p.toLowerCase() === partA.toLowerCase())) {
-                resultPart = monsterData[resultMonster].parts.find(p => p.toLowerCase() === partA.toLowerCase());
+            if (selectedPartA.name.toLowerCase() === selectedPartB.name.toLowerCase() && monsterData[resultMonster] && 
+                monsterData[resultMonster].parts.some(p => p.toLowerCase() === selectedPartA.name.toLowerCase())) {
+                resultPart = monsterData[resultMonster].parts.find(p => p.toLowerCase() === selectedPartA.name.toLowerCase());
             } else {
                 resultPart = getRandomPart(resultMonster);
             }
             
             const resultFamily = monsterData[resultMonster] ? monsterData[resultMonster].family : 'Unknown';
             
+            // Get the part icon and create new part for inventory
+            let partIconHtml = '';
+            let newPartData = null;
+            try {
+                const response = await fetch('/api/monsters');
+                const monsters = await response.json();
+                const monster = monsters.find(m => m.name === resultMonster);
+                
+                if (monster && monster.parts) {
+                    const parts = JSON.parse(monster.parts);
+                    if (parts[resultPart]) {
+                        partIconHtml = `<img src="${parts[resultPart]}" alt="${resultPart}" style="width: 64px; height: 64px; image-rendering: pixelated; border: 2px solid #333; margin: 10px 0;">`;
+                        newPartData = {
+                            name: resultPart,
+                            monster: resultMonster,
+                            family: resultFamily,
+                            rarity: monsterData[resultMonster].rarity || 1,
+                            sprite: parts[resultPart]
+                        };
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to load part icon:', error);
+            }
+            
+            // Update inventory: remove used parts, add new part
+            let inventory = JSON.parse(localStorage.getItem('partInventory')) || [];
+            
+            // Remove the two used parts
+            const partAIndex = inventory.findIndex(p => p.name === selectedPartA.name && p.monster === selectedPartA.monster);
+            const partBIndex = inventory.findIndex(p => p.name === selectedPartB.name && p.monster === selectedPartB.monster);
+            
+            if (partAIndex >= 0) inventory.splice(partAIndex, 1);
+            if (partBIndex >= 0) inventory.splice(partBIndex, 1);
+            
+            // Add the new part
+            if (newPartData) {
+                inventory.push(newPartData);
+                // Discover the monster when creating a part
+                discoverMonster(resultMonster);
+            }
+            
+            // Save updated inventory
+            localStorage.setItem('partInventory', JSON.stringify(inventory));
+            allParts = inventory;
+            
+            // Show toast notification
+            if (newPartData) {
+                showToast(`You created: ${newPartData.name} from ${newPartData.monster}!`, newPartData.rarity);
+            }
+            
+            // Clear selections and update UI
+            selectedPartA = null;
+            selectedPartB = null;
+            document.getElementById('partPreviewA').innerHTML = 'No part selected';
+            document.getElementById('partPreviewB').innerHTML = 'No part selected';
+            document.getElementById('infoA').innerHTML = '';
+            document.getElementById('infoB').innerHTML = '';
+            
             resultContent.innerHTML = `
                 <div class="success">Combination Successful!</div>
-                <div class="breeding-info">
-                    <strong>Input:</strong><br>
-                    • ${monsterA} (${monsterData[monsterA].family}) - ${partA}<br>
-                    • ${monsterB} (${monsterData[monsterB].family}) - ${partB}
+                <div style="margin: 10px 0; padding: 10px; background: #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <strong>Parts Used:</strong><br>
+                    • ${selectedPartA ? selectedPartA.monster + ' - ' + selectedPartA.name : 'Unknown'}<br>
+                    • ${selectedPartB ? selectedPartB.monster + ' - ' + selectedPartB.name : 'Unknown'}
                 </div>
-                <div class="part-info">
-                    <strong>Result:</strong> ${resultPart} from ${resultMonster}<br>
-                    <strong>Family:</strong> ${resultFamily}
+                <div class="part-info" style="text-align: center;">
+                    ${partIconHtml}
+                    <div><strong>Result:</strong> ${resultPart} from ${resultMonster}</div>
+                    <div><strong>Family:</strong> ${resultFamily}</div>
+                    <div style="color: green; font-weight: bold; margin-top: 10px;">Added to inventory!</div>
                 </div>
             `;
             
             resultDiv.style.display = 'block';
+            checkCombineReady();
+        }
+        
+        function getRandomPart(monster) {
+            if (!monsterData[monster] || !monsterData[monster].parts.length) {
+                console.warn(`No parts available for ${monster}`);
+                return 'Unknown Part';
+            }
+            const parts = monsterData[monster].parts;
+            return parts[Math.floor(Math.random() * parts.length)];
+        }
+        
+        function combineParts() {
+            if (!selectedPartA || !selectedPartB) return;
+            
+            // Find the best breeding match
+            const matches = findAllBreedingResults(selectedPartA.monster, selectedPartB.monster);
+            if (matches.length > 0) {
+                selectBreed(matches[0].target);
+            } else {
+                // Fallback to simple combination
+                const result = document.getElementById('result');
+                const resultContent = document.getElementById('resultContent');
+                
+                resultContent.innerHTML = `
+                    <div class="success">Parts combined successfully!</div>
+                    <p><strong>Input:</strong> ${selectedPartA.name} from ${selectedPartA.monster} + ${selectedPartB.name} from ${selectedPartB.monster}</p>
+                    <p><strong>Result:</strong> Hybrid ${selectedPartA.name} (${selectedPartA.family} × ${selectedPartB.family})</p>
+                `;
+                
+                result.style.display = 'block';
+            }
         }
         
         // Event listeners
-        document.getElementById('monsterA').addEventListener('change', () => onMonsterSelect('monsterA', 'partTypeA', 'infoA'));
-        document.getElementById('monsterB').addEventListener('change', () => onMonsterSelect('monsterB', 'partTypeB', 'infoB'));
-        document.getElementById('partTypeA').addEventListener('change', onPartSelect);
-        document.getElementById('partTypeB').addEventListener('change', onPartSelect);
+        // Remove old event listeners since we're not using dropdowns anymore
         
-        // Load data on page load
+        function updateReverseLookup() {
+            if (!reverseLookupUnlocked) return;
+            
+            const content = document.getElementById('reverseLookupContent');
+            
+            if (allParts.length < 2) {
+                content.innerHTML = '<p>Need at least 2 parts in inventory to show combinations.</p>';
+                return;
+            }
+            
+            const combinations = new Set();
+            
+            // Check all possible part combinations
+            for (let i = 0; i < allParts.length; i++) {
+                for (let j = i + 1; j < allParts.length; j++) {
+                    const partA = allParts[i];
+                    const partB = allParts[j];
+                    
+                    // Skip if it's the same part (same name and monster)
+                    if (partA.name === partB.name && partA.monster === partB.monster) {
+                        continue;
+                    }
+                    
+                    const matches = findAllBreedingResults(partA.monster, partB.monster);
+                    matches.forEach(match => {
+                        combinations.add(match.target);
+                    });
+                }
+            }
+            
+            if (combinations.size === 0) {
+                content.innerHTML = '<p>No breeding combinations possible with current inventory.</p>';
+                return;
+            }
+            
+            let sortedCombinations = Array.from(combinations);
+            
+            // Sort combinations
+            if (sortBy === 'name') {
+                sortedCombinations.sort((a, b) => sortAscending ? a.localeCompare(b) : b.localeCompare(a));
+            } else if (sortBy === 'rarity') {
+                const rarityOrder = { 'common': 1, 'uncommon': 2, 'rare': 3, 'epic': 4, 'legendary': 5, 'mythic': 6 };
+                sortedCombinations.sort((a, b) => {
+                    const rarityA = monsterData[a] ? rarityOrder[monsterData[a].rarity] || 1 : 1;
+                    const rarityB = monsterData[b] ? rarityOrder[monsterData[b].rarity] || 1 : 1;
+                    return sortAscending ? rarityA - rarityB : rarityB - rarityA;
+                });
+            }
+            
+            const html = sortedCombinations.map(monster => {
+                const family = monsterData[monster] ? monsterData[monster].family : 'Unknown';
+                const rarity = monsterData[monster] ? monsterData[monster].rarity : 1;
+                const rarityClass = getRarityClass(rarity);
+                
+                // Check if this monster is rarer than all possible parent combinations
+                let isRarityUpgrade = false;
+                const rarityOrder = { 'common': 1, 'uncommon': 2, 'rare': 3, 'epic': 4, 'legendary': 5, 'mythic': 6 };
+                const resultRarityLevel = rarityOrder[rarity] || 1;
+                
+                for (let i = 0; i < allParts.length; i++) {
+                    for (let j = i + 1; j < allParts.length; j++) {
+                        const partA = allParts[i];
+                        const partB = allParts[j];
+                        
+                        if (partA.name === partB.name && partA.monster === partB.monster) continue;
+                        
+                        const matches = findAllBreedingResults(partA.monster, partB.monster);
+                        if (matches.some(match => match.target === monster)) {
+                            const parentARarityLevel = rarityOrder[partA.rarity] || 1;
+                            const parentBRarityLevel = rarityOrder[partB.rarity] || 1;
+                            const maxParentRarityLevel = Math.max(parentARarityLevel, parentBRarityLevel);
+                            if (resultRarityLevel > maxParentRarityLevel) {
+                                isRarityUpgrade = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (isRarityUpgrade) break;
+                }
+                
+                const upgradeIcon = isRarityUpgrade ? '<span style="color: red; font-weight: bold; margin-left: 10px;">↑</span>' : '';
+                
+                // Check if monster is discovered
+                const isDiscovered = isMonsterDiscovered(monster);
+                const displayName = isDiscovered ? monster : '???????';
+                const displayFamily = isDiscovered ? family : '???????';
+                
+                return `<div class="breed-option ${rarityClass}" style="margin: 5px 0; cursor: pointer;" onclick="loadPartsForMonster('${monster}')">
+                    <div class="breed-info">
+                        <strong>${displayName}</strong> (${displayFamily})${upgradeIcon}
+                    </div>
+                </div>`;
+            }).join('');
+            
+            content.innerHTML = html;
+        }
+        
+        function loadPartsForMonster(targetMonster) {
+            // Find the first valid combination that produces this monster
+            for (let i = 0; i < allParts.length; i++) {
+                for (let j = i + 1; j < allParts.length; j++) {
+                    const partA = allParts[i];
+                    const partB = allParts[j];
+                    
+                    // Skip if it's the same part
+                    if (partA.name === partB.name && partA.monster === partB.monster) {
+                        continue;
+                    }
+                    
+                    const matches = findAllBreedingResults(partA.monster, partB.monster);
+                    if (matches.some(match => match.target === targetMonster)) {
+                        // Load these parts into the selectors
+                        selectedPartA = partA;
+                        selectedPartB = partB;
+                        updatePartPreview('A', partA);
+                        updatePartPreview('B', partB);
+                        checkCombineReady();
+                        return;
+                    }
+                }
+            }
+        }
+        
+        function isMonsterDiscovered(monsterName) {
+            const monster = monsterData[monsterName];
+            if (!monster) return true;
+            
+            const rarityOrder = { 'common': 1, 'uncommon': 2, 'rare': 3, 'epic': 4, 'legendary': 5, 'mythic': 6 };
+            const rarityLevel = rarityOrder[monster.rarity] || 1;
+            
+            // Common and uncommon monsters are always visible
+            if (rarityLevel < 3) return true;
+            
+            // Rare+ monsters need to be discovered
+            return discoveredMonsters.includes(monsterName);
+        }
+        
+        function discoverMonster(monsterName) {
+            if (!discoveredMonsters.includes(monsterName)) {
+                discoveredMonsters.push(monsterName);
+                localStorage.setItem('discoveredMonsters', JSON.stringify(discoveredMonsters));
+            }
+        }
+        
+        function showToast(message, rarity) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${getRarityClass(rarity)}`;
+            toast.textContent = message;
+            
+            // Position toast (stack if multiple)
+            const existingToasts = document.querySelectorAll('.toast');
+            const topOffset = 20 + (existingToasts.length * 70);
+            toast.style.top = topOffset + 'px';
+            
+            document.body.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Remove toast after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        function sortReverseLookup(newSortBy) {
+            if (!reverseLookupUnlocked) return;
+            sortBy = newSortBy;
+            updateReverseLookup();
+        }
+        
+        function toggleSortOrder() {
+            if (!reverseLookupUnlocked) return;
+            sortAscending = !sortAscending;
+            const btn = document.getElementById('sortOrderBtn');
+            btn.innerHTML = `<p>${sortAscending ? '↑ Asc' : '↓ Desc'}</p>`;
+            updateReverseLookup();
+        }
+        
+        // Tutorial system
+        let tutorialStep = 0;
+        let tutorialActive = false;
+        
+        const tutorialSteps = [
+            { element: '.part-input:first-child button', text: "Welcome to the Part Combiner! Click this 'Choose Part' button to select your first part.", action: 'click' },
+            { element: '.inventory-part:first-child', text: "Great! This inventory shows parts you've purchased from the shop or created through combining. Since you didn't have any parts, we added some tutorial parts for you. Click on any part to select it.", action: 'click', waitForModal: true },
+            { element: '.part-input:last-child button', text: "Perfect! Now click the second 'Choose Part' button to select another part.", action: 'click' },
+            { element: '.inventory-part:first-child', text: "Select a different part to create a combination.", action: 'click', waitForModal: true },
+            { element: '#breedPreview .rpgui-button', text: "Excellent! When both parts are selected, possible breeding results appear here. Notice the red arrow next to WingSlime - this means the result is rarer than both parent parts! Click the Select button on WingSlime to continue.", action: 'click' },
+            { element: '#result', text: "Important! Creating a new part consumes the parts you used. Only combine parts when you see a red arrow (rarity upgrade) or when targeting a specific part you need.", action: 'none' },
+            { element: '.rpgui-button[onclick*="part-shop"]', text: "Visit The Chop Shop to buy more parts. Tutorial complete!", action: 'none' }
+        ];
+        
         loadData();
+        
+        // Auto-crop the chest image
+        autoCropImage('/assets/icons/misc/other/chest_of_parts_large.png').then(croppedImage => {
+            const chestImg = document.querySelector('.chop-container img');
+            if (chestImg) {
+                chestImg.src = croppedImage;
+            }
+        });
+        
+        // Auto-start tutorial on first visit
+        if (!localStorage.getItem('partCombinerTutorialCompleted')) {
+            setTimeout(startTutorial, 1000);
+        }
+        
+        async function startTutorial() {
+            tutorialStep = 0;
+            tutorialActive = true;
+            
+            // Add tutorial parts to inventory if empty
+            let inventory = JSON.parse(localStorage.getItem('partInventory')) || [];
+            
+            if (inventory.length === 0) {
+                try {
+                    const response = await fetch('/api/monsters');
+                    const monsters = await response.json();
+                    
+                    const tutorialParts = [];
+                    
+                    // Get Slime Body part
+                    const slime = monsters.find(m => m.name === 'Slime');
+                    if (slime && slime.parts) {
+                        const parts = JSON.parse(slime.parts);
+                        if (parts.Body) {
+                            tutorialParts.push({
+                                name: 'Body',
+                                monster: 'Slime',
+                                family: slime.family || 'Slime',
+                                rarity: slime.rarity || 'common',
+                                sprite: parts.Body
+                            });
+                        }
+                    }
+                    
+                    // Get Dracky Torso part
+                    const dracky = monsters.find(m => m.name === 'Dracky');
+                    if (dracky && dracky.parts) {
+                        const parts = JSON.parse(dracky.parts);
+                        if (parts.Torso) {
+                            tutorialParts.push({
+                                name: 'Torso',
+                                monster: 'Dracky',
+                                family: dracky.family || 'Bird',
+                                rarity: dracky.rarity || 'common',
+                                sprite: parts.Torso
+                            });
+                        }
+                    }
+                    
+                    if (tutorialParts.length > 0) {
+                        localStorage.setItem('partInventory', JSON.stringify(tutorialParts));
+                        allParts = tutorialParts;
+                    }
+                } catch (error) {
+                    console.error('Failed to load tutorial parts:', error);
+                }
+            }
+            
+            document.getElementById('tutorial-modal').style.display = 'block';
+            showTutorialStep();
+        }
+        
+        function showTutorialStep() {
+            if (tutorialStep >= tutorialSteps.length) {
+                closeTutorial();
+                return;
+            }
+            
+            const step = tutorialSteps[tutorialStep];
+            
+            if (step.waitForModal && document.getElementById('part-selector-modal').style.display === 'none') {
+                setTimeout(showTutorialStep, 100);
+                return;
+            }
+            
+            const element = document.querySelector(step.element);
+            
+            if (element) {
+                positionTutorialModal(element);
+            }
+            
+            document.getElementById('tutorial-text').textContent = step.text;
+            
+            const nextBtn = document.querySelector('#tutorial-content .rpgui-button');
+            if (step.action === 'click') {
+                nextBtn.style.display = 'none';
+            } else {
+                nextBtn.style.display = 'inline-block';
+            }
+        }
+        
+        function nextTutorialStep() {
+            tutorialStep++;
+            showTutorialStep();
+        }
+        
+        function closeTutorial() {
+            tutorialActive = false;
+            document.getElementById('tutorial-modal').style.display = 'none';
+            localStorage.setItem('partCombinerTutorialCompleted', 'true');
+        }
+        
+        function positionTutorialModal(element) {
+            const rect = element.getBoundingClientRect();
+            const modal = document.getElementById('tutorial-content');
+            const spotlight = document.getElementById('tutorial-spotlight');
+            const oldManImg = document.getElementById('tutorial-old-man');
+            
+            const spotlightSize = Math.max(rect.width, rect.height) + 60;
+            const spotlightX = rect.left + rect.width / 2 - spotlightSize / 2;
+            const spotlightY = rect.top + rect.height / 2 - spotlightSize / 2;
+            
+            spotlight.style.left = spotlightX + 'px';
+            spotlight.style.top = spotlightY + 'px';
+            spotlight.style.width = spotlightSize + 'px';
+            spotlight.style.height = spotlightSize + 'px';
+            spotlight.style.display = 'block';
+            
+            let left = rect.right + 20;
+            let top = rect.top;
+            
+            // If part selector modal is open, position to the left instead
+            if (document.getElementById('part-selector-modal').style.display === 'block') {
+                left = rect.left - 400;
+            }
+            
+            const modalWidth = 380;
+            const modalHeight = 300;
+            
+            modal.style.left = left + 'px';
+            modal.style.top = top + 'px';
+            
+            // Position old man to point at the target element
+            const step = tutorialSteps[tutorialStep];
+            if (step && step.action === 'click') {
+                oldManImg.src = '/assets/icons/misc/other/old_man_pointing_animation.gif';
+                
+                const targetCenterX = rect.left + rect.width / 2;
+                const targetCenterY = rect.top + rect.height / 2;
+                const modalCenterX = left + modalWidth / 2;
+                
+                // Determine if target is to the left or right of modal
+                const isTargetLeft = targetCenterX < modalCenterX;
+                
+                // Mirror the image if pointing left
+                if (isTargetLeft) {
+                    oldManImg.style.transform = 'scaleX(-1)';
+                } else {
+                    oldManImg.style.transform = 'scaleX(1)';
+                }
+                
+                // Position old man anywhere on screen, closer to target
+                const oldManSize = 100;
+                let oldManX, oldManY;
+                
+                // Position old man on same side as modal relative to target
+                const isModalRight = left > targetCenterX;
+                
+                if (isModalRight) {
+                    // Modal is to the right, put old man to the right too
+                    oldManX = Math.min(window.innerWidth - oldManSize, targetCenterX + rect.width / 2 + 50);
+                } else {
+                    // Modal is to the left, put old man to the left too
+                    oldManX = Math.max(0, targetCenterX - rect.width / 2 - oldManSize - 50);
+                }
+                
+                // Adjust modal position to avoid overlap with old man
+                if (isModalRight && left < oldManX + oldManSize + 20) {
+                    left = oldManX + oldManSize + 20;
+                } else if (!isModalRight && left + modalWidth > oldManX - 20) {
+                    left = oldManX - modalWidth - 20;
+                }
+                
+                modal.style.left = left + 'px';
+                modal.style.top = top + 'px';
+                
+                oldManY = Math.max(0, Math.min(targetCenterY - oldManSize / 2, window.innerHeight - oldManSize));
+                
+                oldManImg.style.left = oldManX + 'px';
+                oldManImg.style.top = oldManY + 'px';
+                oldManImg.style.display = 'block';
+            } else {
+                // Reset to idle animation and show at top of modal for non-pointing steps
+                oldManImg.src = '/assets/icons/misc/other/old_man_idle_animation.gif';
+                oldManImg.style.transform = 'none';
+                
+                // Center the modal
+                left = (window.innerWidth - modalWidth) / 2;
+                top = (window.innerHeight - modalHeight) / 2;
+                
+                // Position old man at top of modal with padding
+                oldManImg.style.left = (left + modalWidth / 2 - 50) + 'px';
+                oldManImg.style.top = (top - 120) + 'px';
+                oldManImg.style.display = 'block';
+            }
+            
+            modal.style.left = left + 'px';
+            modal.style.top = top + 'px';
+        }
     </script>
+    
+    <!-- Navigation buttons -->
+    <div class="bottom-right-buttons" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; gap: 10px;">
+        <div style="position: relative; display: inline-block;" class="chop-container">
+            <button class="rpgui-button" onclick="window.location.href='part-shop.html'" style="position: relative; z-index: 2;"><p>THE CHOP SHOP</p></button>
+            <img src="/assets/icons/misc/other/chest_of_parts_large.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="maker-container">
+            <button class="rpgui-button" onclick="window.location.href='part-monster-maker.html'" style="position: relative; z-index: 2;"><p>ALTAR OF CREATION</p></button>
+            <img src="/assets/icons/misc/other/Starry Shrine Altar.png" style="position: absolute; width: 150px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+    </div>
+
+    <!-- Tutorial Modal -->
+    <div id="tutorial-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0); z-index: 3000; pointer-events: none;">
+        <div id="tutorial-spotlight" style="position: absolute; background: transparent; border-radius: 50%; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0); z-index: 3001; pointer-events: none;"></div>
+        <img id="tutorial-old-man" src="/assets/icons/misc/other/old_man_idle_animation.gif" style="position: absolute; image-rendering: pixelated; width: 100px; height: 100px; object-fit: contain; z-index: 3002; pointer-events: none;" alt="Old Man">
+        <div id="tutorial-content" style="position: absolute; background: #333; padding: 20px; border-radius: 10px; text-align: center; width: 360px; font-family: 'Press Start 2P', cursive; font-size: 12px; line-height: 1.8; color: white; pointer-events: auto;">
+            <div id="tutorial-text" style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;"></div>
+            <button class="rpgui-button" onclick="nextTutorialStep()"><p style="font-family: 'Press Start 2P', cursive; color: white;">Next</p></button>
+        </div>
+    </div>
 </body>
 </html>

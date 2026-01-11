@@ -1,9 +1,9 @@
 function getRarity(rarity) {
-    if (rarity >= 4) return { name: 'Mythic', class: 'rarity-mythic' };
-    if (rarity >= 3) return { name: 'Legendary', class: 'rarity-legendary' };
-    if (rarity >= 2.5) return { name: 'Epic', class: 'rarity-epic' };
-    if (rarity >= 2) return { name: 'Rare', class: 'rarity-rare' };
-    if (rarity >= 1.5) return { name: 'Uncommon', class: 'rarity-uncommon' };
+    if (rarity === 'mythic') return { name: 'Mythic', class: 'rarity-mythic' };
+    if (rarity === 'legendary') return { name: 'Legendary', class: 'rarity-legendary' };
+    if (rarity === 'epic') return { name: 'Epic', class: 'rarity-epic' };
+    if (rarity === 'rare') return { name: 'Rare', class: 'rarity-rare' };
+    if (rarity === 'uncommon') return { name: 'Uncommon', class: 'rarity-uncommon' };
     return { name: 'Common', class: 'rarity-common' };
 }
 
@@ -33,6 +33,7 @@ function getFamilyInfo(monsterName) {
 // Part-based Monster Maker Script - Based on original script.js
 let workspace, ctx;
 let selectedPartsSlots = new Array(8).fill(null);
+let unlockedSlots = parseInt(localStorage.getItem('unlockedSlots')) || 4; // Load from localStorage
 let partInventory = [];
 let placedParts = [];
 let usedPartIds = new Set(); // Track which inventory parts are used
@@ -40,6 +41,7 @@ let selectedPart = null;
 let selectedParts = [];
 let isDragging = false;
 let selectedLayerIndex = -1;
+let currentSelectedSlot = null; // Track currently selected slot in selected parts
 let animationFrameId = null;
 let imageCache = new Map();
 let currentPalette = 'original';
@@ -51,6 +53,42 @@ let partSpecificMappings = {};
 let undoStack = [];
 let redoStack = [];
 const maxUndoSteps = 20;
+let colorPaletteUnlocked = localStorage.getItem('colorPaletteUnlocked') === 'true';
+
+// Save workspace state to localStorage
+function saveWorkspaceState() {
+    const workspaceState = {
+        selectedPartsSlots,
+        placedParts,
+        usedPartIds: Array.from(usedPartIds),
+        currentPalette,
+        colorMappings,
+        partSpecificMappings,
+        partPalettes: Array.from(partPalettes.entries())
+    };
+    localStorage.setItem('workspaceState', JSON.stringify(workspaceState));
+}
+
+// Load workspace state from localStorage
+function loadWorkspaceState() {
+    const saved = localStorage.getItem('workspaceState');
+    if (!saved) return;
+    
+    try {
+        const state = JSON.parse(saved);
+        selectedPartsSlots = state.selectedPartsSlots || new Array(8).fill(null);
+        placedParts = state.placedParts || [];
+        usedPartIds = new Set(state.usedPartIds || []);
+        currentPalette = state.currentPalette || 'original';
+        colorMappings = state.colorMappings || {};
+        partSpecificMappings = state.partSpecificMappings || {};
+        if (state.partPalettes) {
+            partPalettes = new Map(state.partPalettes);
+        }
+    } catch (error) {
+        console.error('Error loading workspace state:', error);
+    }
+}
 
 // Calculate creation value based on part rarities
 function calculateCreationValue() {
@@ -65,6 +103,101 @@ function calculateCreationValue() {
         if (rarity >= 1.5) return total + 15;
         return total + 10;
     }, 0);
+}
+
+function buySlot() {
+    const slotCosts = [0, 0, 0, 0, 100, 1000, 10000, 100000]; // Costs for each slot
+    const cost = slotCosts[unlockedSlots];
+    let gold = parseInt(localStorage.getItem('gold')) || 0;
+    
+    if (gold >= cost && unlockedSlots < 8) {
+        gold -= cost;
+        localStorage.setItem('gold', gold);
+        unlockedSlots++;
+        localStorage.setItem('unlockedSlots', unlockedSlots);
+        
+        // Update gold display
+        const goldElement = document.getElementById('gold-display');
+        if (goldElement) {
+            goldElement.textContent = gold;
+        }
+        
+        updateSelectedPartsDisplay();
+    }
+}
+
+function calculateMonsterValue() {
+    let baseValue = 0;
+    const parts = selectedPartsSlots.filter(part => part !== null);
+    
+    // Calculate base value
+    parts.forEach(part => {
+        const rarityValues = { 'common': 1, 'uncommon': 1.5, 'rare': 2, 'epic': 2.5, 'legendary': 3, 'mythic': 4 };
+        const rarityValue = rarityValues[part.rarity] || 1;
+        baseValue += Math.floor(rarityValue * 10);
+    });
+    
+    // Calculate same-monster bonuses
+    const monsterCounts = {};
+    parts.forEach(part => {
+        const key = `${part.name}-${part.monster}`;
+        if (!monsterCounts[part.monster]) monsterCounts[part.monster] = new Set();
+        monsterCounts[part.monster].add(key);
+    });
+    
+    let bonusMultiplier = 0;
+    Object.values(monsterCounts).forEach(uniqueParts => {
+        const count = uniqueParts.size;
+        if (count >= 2) {
+            bonusMultiplier += 0.1 + (count - 2) * 0.2;
+        }
+    });
+    
+    return Math.floor(baseValue * (1 + bonusMultiplier));
+}
+
+function updateMonsterValue() {
+    const parts = selectedPartsSlots.filter(part => part !== null);
+    let baseValue = 0;
+    
+    // Calculate base value
+    parts.forEach(part => {
+        const rarityValues = { 'common': 1, 'uncommon': 1.5, 'rare': 2, 'epic': 2.5, 'legendary': 3, 'mythic': 4 };
+        const rarityValue = rarityValues[part.rarity] || 1;
+        baseValue += Math.floor(rarityValue * 10);
+    });
+    
+    // Calculate same-monster bonuses
+    const monsterCounts = {};
+    parts.forEach(part => {
+        const key = `${part.name}-${part.monster}`;
+        if (!monsterCounts[part.monster]) monsterCounts[part.monster] = new Set();
+        monsterCounts[part.monster].add(key);
+    });
+    
+    let bonusMultiplier = 0;
+    const bonuses = [];
+    Object.entries(monsterCounts).forEach(([monster, uniqueParts]) => {
+        const count = uniqueParts.size;
+        if (count >= 2) {
+            const bonus = 0.1 + (count - 2) * 0.2;
+            bonusMultiplier += bonus;
+            bonuses.push(`${monster}: +${Math.round(bonus * 100)}%`);
+        }
+    });
+    
+    const finalValue = Math.floor(baseValue * (1 + bonusMultiplier));
+    
+    const valueElement = document.getElementById('monster-value');
+    const bonusElement = document.getElementById('bonus-text');
+    
+    if (valueElement) {
+        valueElement.textContent = finalValue;
+    }
+    
+    if (bonusElement) {
+        bonusElement.textContent = bonuses.length > 0 ? bonuses.join(', ') : '';
+    }
 }
 
 // Load part inventory from localStorage
@@ -83,25 +216,89 @@ async function updatePartInventoryDisplay() {
         return;
     }
     
-    const trimmedParts = await Promise.all(
-        partInventory.map(async (part, index) => {
-            const trimmedSprite = await autoCropImage(part.sprite);
-            return { ...part, trimmedSprite, index };
-        })
-    );
+    // Save current expanded state
+    const expandedStates = {};
+    document.querySelectorAll('[id^="inv-category-"]').forEach(category => {
+        const type = category.id.replace('inv-category-', '');
+        expandedStates[type] = category.style.display !== 'none';
+    });
     
-    inventoryDiv.innerHTML = trimmedParts.map((part) => {
-        const rarityInfo = getRarity(part.rarity);
-        const familyInfo = getFamilyInfo(part.monster);
-        return `
-        <div class="inventory-part ${rarityInfo.class} ${usedPartIds.has(part.index) ? 'used' : ''}" onclick="selectInventoryPart(${part.index})" style="position: relative;">
-            <img src="${part.trimmedSprite}" alt="${part.name}">
-            <div class="part-name">${part.name}</div>
-            <div class="part-monster">${part.monster} - ${familyInfo.name}</div>
-            <div style="font-size: 12px; font-weight: 600; color: #333;">${rarityInfo.name}</div>
-            <img src="${familyInfo.icon}" style="position: absolute; top: 5px; right: 5px; width: 16px; height: 16px; image-rendering: pixelated;" alt="${familyInfo.name}">
-        </div>`;
-    }).join('');
+    // Group parts by type
+    const partsByType = {};
+    partInventory.forEach((part, index) => {
+        const type = part.name.toLowerCase().includes('head') ? 'Head' :
+                   part.name.toLowerCase().includes('body') || part.name.toLowerCase().includes('torso') ? 'Body' :
+                   part.name.toLowerCase().includes('arm') ? 'Arms' :
+                   part.name.toLowerCase().includes('leg') ? 'Legs' :
+                   part.name.toLowerCase().includes('wing') ? 'Wings' :
+                   part.name.toLowerCase().includes('eye') ? 'Eyes' :
+                   part.name.toLowerCase().includes('ear') ? 'Ears' :
+                   part.name.toLowerCase().includes('tail') ? 'Tails' :
+                   'Other';
+                   
+        if (!partsByType[type]) partsByType[type] = [];
+        partsByType[type].push({...part, index});
+    });
+    
+    let inventoryHtml = '';
+    
+    for (const [type, parts] of Object.entries(partsByType).sort()) {
+        const isExpanded = expandedStates[type] || false;
+        const arrowIcon = isExpanded ? '▼' : '▶';
+        const displayStyle = isExpanded ? 'block' : 'none';
+        
+        inventoryHtml += `
+            <div style="margin-bottom: 10px;">
+                <div onclick="toggleInventoryCategory('${type}')" style="cursor: url('../RPGUI/img/cursor/point.png'), pointer; padding: 8px; background: #4a5c4a; color: white; font-weight: bold; border: 1px solid #666;">
+                    <span id="inv-arrow-${type}">${arrowIcon}</span> ${type} (${parts.length})
+                </div>
+                <div id="inv-category-${type}" style="display: ${displayStyle};">
+        `;
+        
+        const categoryItems = await Promise.all(
+            parts.map(async (part) => {
+                const trimmedSprite = await autoCropImage(part.sprite);
+                const rarityInfo = getRarity(part.rarity);
+                const rarityColors = {
+                    'rarity-common': '#6c757d',
+                    'rarity-uncommon': '#28a745',
+                    'rarity-rare': '#17a2b8',
+                    'rarity-epic': '#6f42c1',
+                    'rarity-legendary': '#ffc107',
+                    'rarity-mythic': '#dc3545'
+                };
+                const borderColor = rarityColors[rarityInfo.class] || '#306230';
+                const isUsed = usedPartIds.has(part.index);
+                const greyedStyle = isUsed ? 'opacity: 0.5; cursor: not-allowed;' : '';
+                const clickHandler = isUsed ? '' : `onclick="selectInventoryPart(${part.index})"`;
+                return `<div class="inventory-item ${rarityInfo.class}" ${clickHandler} style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 2px solid #306230; border-left: 4px solid ${borderColor}; margin-bottom: 8px; cursor: url('../RPGUI/img/cursor/point.png'), pointer; font-family: 'Courier New', monospace; font-weight: bold; color: #0f380f; ${greyedStyle}" onmouseover="${isUsed ? '' : "this.style.boxShadow='inset 0 0 15px rgba(255, 255, 255, 0.4)'"}"; onmouseout="${isUsed ? '' : "this.style.boxShadow=''"}";>
+                    <img src="${trimmedSprite}" alt="${part.name}" style="width: 32px; height: 32px; image-rendering: pixelated; object-fit: contain;">
+                    <div>
+                        <div style="font-weight: 600;">${part.name}</div>
+                        <div style="font-size: 12px;">from ${part.monster}</div>
+                        <div style="font-size: 12px; font-weight: 600;">${rarityInfo.name}</div>
+                    </div>
+                </div>`;
+            })
+        );
+        
+        inventoryHtml += categoryItems.join('') + '</div></div>';
+    }
+    
+    inventoryDiv.innerHTML = inventoryHtml;
+}
+
+function toggleInventoryCategory(type) {
+    const category = document.getElementById(`inv-category-${type}`);
+    const arrow = document.getElementById(`inv-arrow-${type}`);
+    
+    if (category.style.display === 'none' || category.style.display === '') {
+        category.style.display = 'block';
+        arrow.textContent = '▼';
+    } else {
+        category.style.display = 'none';
+        arrow.textContent = '▶';
+    }
 }
 
 // Extract color palette from image
@@ -210,6 +407,7 @@ function findClosestColorWithMapping(color, palette, partId = null) {
 
 // Set color palette mode
 function setPalette(mode) {
+    if (!colorPaletteUnlocked) return;
     currentPalette = mode;
     document.querySelectorAll('.palette-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector(`[data-palette="${mode}"]`)?.classList.add('active');
@@ -218,6 +416,7 @@ function setPalette(mode) {
 
 // Display color palettes for placed parts
 function displayPalettes() {
+    if (!colorPaletteUnlocked) return;
     const display = document.getElementById('palette-display');
     if (!display || placedParts.length === 0) return;
     
@@ -239,6 +438,7 @@ function displayPalettes() {
         const colorDiv = document.createElement('div');
         colorDiv.className = 'color-swatch';
         colorDiv.style.backgroundColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+        colorDiv.style.cursor = "url('../RPGUI/img/cursor/point.png'), pointer";
         colorDiv.dataset.color = colorStr;
         colorDiv.onclick = () => selectColor(color, i);
         colorGrid.appendChild(colorDiv);
@@ -246,6 +446,7 @@ function displayPalettes() {
 }
 
 function selectColor(color, index) {
+    if (!colorPaletteUnlocked) return;
     document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
     
     if (selectedColor1 === null) {
@@ -269,12 +470,59 @@ function selectColor(color, index) {
         setPalette('custom');
     }
 }
-function selectPartSlot(slotIndex) {
-    currentSelectedSlot = slotIndex;
-    // Highlight the selected slot
-    document.querySelectorAll('.selected-part').forEach((slot, index) => {
-        slot.style.background = index === slotIndex ? '#ffffcc' : (selectedPartsSlots[index] ? '#e7f3ff' : '#f9f9f9');
+function selectPartSlot(slotIndex, event) {
+    const slotPart = selectedPartsSlots[slotIndex];
+    if (!slotPart) return;
+    
+    const canvasPart = placedParts.find(p => 
+        p.name === slotPart.name && p.monster === slotPart.monster
+    );
+    if (!canvasPart) return;
+    
+    // Handle multi-select with shift
+    if (event && event.shiftKey) {
+        if (selectedParts.includes(canvasPart)) {
+            // Remove from selection
+            selectedParts = selectedParts.filter(p => p !== canvasPart);
+            selectedPart = selectedParts.length > 0 ? selectedParts[selectedParts.length - 1] : null;
+        } else {
+            // Add to selection
+            selectedParts.push(canvasPart);
+            selectedPart = canvasPart;
+        }
+    } else {
+        // Single select
+        selectedParts = [canvasPart];
+        selectedPart = canvasPart;
+        currentSelectedSlot = slotIndex;
+    }
+    
+    // Update highlighting for all selected parts
+    const selectedSlotIndices = [];
+    selectedParts.forEach(selectedPart => {
+        const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+            slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+        );
+        if (slotIndex !== -1) {
+            selectedSlotIndices.push(slotIndex);
+        }
     });
+    
+    const selectedPartsDiv = document.getElementById('selected-parts');
+    if (selectedPartsDiv) {
+        const inventoryItems = selectedPartsDiv.querySelectorAll('.inventory-item');
+        inventoryItems.forEach((item, index) => {
+            if (selectedSlotIndices.includes(index)) {
+                item.style.setProperty('background', '#ffffcc', 'important');
+            } else {
+                item.style.setProperty('background', '', 'important');
+            }
+        });
+    }
+    
+    selectedLayerIndex = placedParts.indexOf(canvasPart);
+    redrawWorkspace();
+    updateLayersList();
 }
 
 // Auto-crop transparent pixels from image data
@@ -328,11 +576,18 @@ function autoCropImage(imageData) {
 function selectInventoryPart(index) {
     if (usedPartIds.has(index)) return; // Prevent using already placed parts
     
+    // Check if all unlocked slots are full
+    const unlockedSlotsUsed = selectedPartsSlots.slice(0, unlockedSlots).filter(slot => slot !== null).length;
+    if (unlockedSlotsUsed >= unlockedSlots) {
+        showToast('No more slots available! Buy more slots or remove a part.');
+        return; // Cannot add more parts
+    }
+    
     saveState();
     const part = partInventory[index];
     
-    // Add to first empty slot
-    const emptySlot = selectedPartsSlots.findIndex(slot => slot === null);
+    // Add to first empty unlocked slot
+    const emptySlot = selectedPartsSlots.slice(0, unlockedSlots).findIndex(slot => slot === null);
     if (emptySlot !== -1) {
         selectedPartsSlots[emptySlot] = part;
     }
@@ -346,6 +601,8 @@ function selectInventoryPart(index) {
     updateSelectedPartsDisplay();
     updateAvailableParts();
     updatePartInventoryDisplay();
+    updateMonsterValue();
+    saveWorkspaceState();
 }
 
 // Add part to workspace - copied from original
@@ -417,30 +674,65 @@ async function updateSelectedPartsDisplay() {
     const slotsDiv = document.getElementById('selected-parts');
     if (!slotsDiv) return;
     
-    const filledCount = selectedPartsSlots.filter(part => part !== null).length;
-    const headerElement = document.querySelector('.tool-section .section-header h3');
+    const filledCount = selectedPartsSlots.slice(0, unlockedSlots).filter(part => part !== null).length;
+    const headerElement = document.querySelector('.rpgui-container h3');
     if (headerElement && headerElement.textContent.includes('Selected Parts')) {
-        headerElement.textContent = `Selected Parts (${filledCount}/8)`;
+        headerElement.textContent = `Selected Parts (${filledCount}/${unlockedSlots})`;
     }
     
     const slotElements = await Promise.all(
         selectedPartsSlots.map(async (part, index) => {
+            const isLocked = index >= unlockedSlots;
+            
             if (part) {
                 const rarityInfo = getRarity(part.rarity);
+                const rarityColors = {
+                    'rarity-common': '#6c757d',
+                    'rarity-uncommon': '#28a745',
+                    'rarity-rare': '#17a2b8',
+                    'rarity-epic': '#6f42c1',
+                    'rarity-legendary': '#ffc107',
+                    'rarity-mythic': '#dc3545'
+                };
+                const borderColor = rarityColors[rarityInfo.class] || '#306230';
                 const trimmedSprite = await autoCropImage(part.sprite);
                 return `
-                    <div class="selected-part filled ${rarityInfo.class}" onclick="selectPartSlot(${index})">
-                        <div>Slot ${index + 1}</div>
-                        <img src="${trimmedSprite}" style="width: 24px; height: 24px; image-rendering: pixelated;">
-                        <div style="font-size: 10px;">${part.name}</div>
-                        <button onclick="removePartFromCanvas(${index}); event.stopPropagation();" style="font-size: 10px; margin-top: 5px;">Remove</button>
+                    <div class="inventory-item ${rarityInfo.class}" onclick="selectPartSlot(${index}, event)" style="display: flex; align-items: center; justify-content: center; padding: 5px; border: 2px solid #306230; border-left: 4px solid ${borderColor}; margin-bottom: 8px; cursor: url('../RPGUI/img/cursor/point.png'), pointer; font-family: 'Courier New', monospace; font-weight: bold; color: #0f380f; height: 20px; position: relative;" onmouseover="this.querySelector('img').style.transform='translateX(-30px)'; this.querySelector('.hover-buttons').style.opacity='1';" onmouseout="this.querySelector('img').style.transform='translateX(0)'; this.querySelector('.hover-buttons').style.opacity='0';">
+                        <img src="${trimmedSprite}" style="width: 32px; height: 32px; image-rendering: pixelated; object-fit: contain; transition: transform 0.2s ease;">
+                        <div class="hover-buttons" style="opacity: 0; position: absolute; right: 5px; gap: 8px; display: flex; transition: opacity 0.2s ease;">
+                            <button onclick="moveSlotUp(${index}); event.stopPropagation();" style="font-size: 14px; padding: 6px 8px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: url('../RPGUI/img/cursor/point.png'), pointer;" onmouseover="this.style.boxShadow='0 0 0 2px #fff'" onmouseout="this.style.boxShadow=''">↑</button>
+                            <button onclick="moveSlotDown(${index}); event.stopPropagation();" style="font-size: 14px; padding: 6px 8px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: url('../RPGUI/img/cursor/point.png'), pointer;" onmouseover="this.style.boxShadow='0 0 0 2px #fff'" onmouseout="this.style.boxShadow=''">↓</button>
+                            <button onclick="removePartFromCanvas(${index}); event.stopPropagation();" style="font-size: 14px; padding: 6px 8px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: url('../RPGUI/img/cursor/point.png'), pointer;" onmouseover="this.style.boxShadow='0 0 0 2px #fff'" onmouseout="this.style.boxShadow=''">🗑</button>
+                        </div>
                     </div>
                 `;
+            } else if (isLocked) {
+                const slotCosts = [0, 0, 0, 0, 100, 1000, 10000, 100000];
+                const cost = slotCosts[index];
+                const gold = parseInt(localStorage.getItem('gold')) || 0;
+                const canAfford = gold >= cost;
+                const isNextSlot = index === unlockedSlots;
+                
+                if (isNextSlot) {
+                    return `
+                        <div class="inventory-item" style="display: flex; align-items: center; justify-content: space-between; padding: 5px; border: 2px solid #444; margin-bottom: 8px; font-family: 'Courier New', monospace; font-weight: bold; color: #666; background: #222; height: 20px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px;">🔒</div>
+                            </div>
+                            <button onclick="buySlot()" style="font-size: 10px; padding: 2px 6px; background: ${canAfford ? '#28a745' : '#666'}; color: white; border: none; border-radius: 3px; cursor: ${canAfford ? "url('../RPGUI/img/cursor/point.png'), pointer" : 'not-allowed'};">BUY ${cost}G</button>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="inventory-item" style="display: flex; align-items: center; justify-content: center; padding: 5px; border: 2px solid #444; margin-bottom: 8px; font-family: 'Courier New', monospace; font-weight: bold; color: #666; background: #222; height: 20px; opacity: 0.5;">
+                            <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px;">🔒</div>
+                        </div>
+                    `;
+                }
             } else {
                 return `
-                    <div class="selected-part" onclick="selectPartSlot(${index})">
-                        <div>Slot ${index + 1}</div>
-                        <div>Empty</div>
+                    <div class="inventory-item" onclick="selectPartSlot(${index})" style="display: flex; align-items: center; justify-content: center; padding: 5px; border: 2px solid #666; margin-bottom: 8px; cursor: url('../RPGUI/img/cursor/point.png'), pointer; font-family: 'Courier New', monospace; font-weight: bold; color: #999; background: #333; height: 20px;" onmouseover="this.style.boxShadow='inset 0 0 15px rgba(255, 255, 255, 0.2)'" onmouseout="this.style.boxShadow=''">
+                        <div style="width: 32px; height: 32px; border: 1px dashed #666; display: flex; align-items: center; justify-content: center; font-size: 20px;">+</div>
                     </div>
                 `;
             }
@@ -448,6 +740,19 @@ async function updateSelectedPartsDisplay() {
     );
     
     slotsDiv.innerHTML = slotElements.join('');
+}
+
+// Tab functions
+function showTab(tabName) {
+    document.querySelectorAll('#creator, #gallery').forEach(tab => {
+        tab.style.display = 'none';
+    });
+    document.querySelectorAll('#creator-tab, #gallery-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    document.getElementById(tabName).style.display = 'block';
+    document.getElementById(tabName + '-tab').classList.add('active');
 }
 
 // Remove part from canvas and slot
@@ -477,6 +782,7 @@ function removePartFromCanvas(slotIndex) {
     redrawWorkspace();
     updateLayersList();
     updatePartInventoryDisplay();
+    updateMonsterValue();
 }
 
 // Update available parts for workspace
@@ -566,8 +872,9 @@ async function redrawWorkspace() {
         ctx.stroke();
     }
     
-    // Draw all parts in order
-    for (const part of placedParts) {
+    // Draw all parts in reverse order (first in list = on top)
+    for (let i = placedParts.length - 1; i >= 0; i--) {
+        const part = placedParts[i];
         let dataUrl = part.originalDataUrl || part.dataUrl;
         
         // Apply palette conversion if needed
@@ -643,7 +950,7 @@ function handlePointerDown(x, y) {
     let clickedPart = null;
     
     // Find clicked/touched part (check from top to bottom)
-    for (let i = placedParts.length - 1; i >= 0; i--) {
+    for (let i = 0; i < placedParts.length; i++) {
         const part = placedParts[i];
         if (x >= part.x && x <= part.x + part.width &&
             y >= part.y && y <= part.y + part.height) {
@@ -682,10 +989,56 @@ function handlePointerDown(x, y) {
         selectedParts = [];
         selectedPart = null;
         selectedLayerIndex = -1;
+        currentSelectedSlot = null;
+        
+        // Clear highlighting in selected parts window
+        const selectedPartsDiv = document.getElementById('selected-parts');
+        if (selectedPartsDiv) {
+            const inventoryItems = selectedPartsDiv.querySelectorAll('.inventory-item');
+            inventoryItems.forEach((item) => {
+                item.style.setProperty('background', '', 'important');
+            });
+        }
     }
     
     redrawWorkspace();
     updateLayersList();
+    
+    // Highlight corresponding slot in selected parts window
+    if (selectedParts.length > 0) {
+        console.log('Selected parts:', selectedParts.map(p => `${p.name} ${p.monster}`));
+        console.log('selectedPartsSlots:', selectedPartsSlots.map((p, i) => `${i}: ${p ? p.name : 'null'}`));
+        
+        const selectedSlotIndices = [];
+        selectedParts.forEach(selectedPart => {
+            const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+                slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+            );
+            if (slotIndex !== -1) {
+                selectedSlotIndices.push(slotIndex);
+            }
+        });
+        
+        console.log('Found slotIndices:', selectedSlotIndices);
+        
+        if (selectedSlotIndices.length > 0) {
+            const selectedPartsDiv = document.getElementById('selected-parts');
+            if (selectedPartsDiv) {
+                const inventoryItems = selectedPartsDiv.querySelectorAll('.inventory-item');
+                console.log('DOM inventory items count:', inventoryItems.length);
+                
+                inventoryItems.forEach((item, index) => {
+                    const isSelected = selectedSlotIndices.includes(index);
+                    console.log(`Item ${index}: highlighting=${isSelected}`);
+                    if (isSelected) {
+                        item.style.setProperty('background', '#ffffcc', 'important');
+                    } else {
+                        item.style.setProperty('background', '', 'important');
+                    }
+                });
+            }
+        }
+    }
 }
 
 function handleMouseMove(e) {
@@ -727,6 +1080,7 @@ function handlePointerMove(x, y) {
         });
         
         redrawWorkspace();
+        saveWorkspaceState();
     }
 }
 
@@ -775,17 +1129,39 @@ function handlePointerUp() {
 
 // Handle keyboard input for arrow key movement and layer controls
 function handleKeyDown(e) {
+    // Don't handle shortcuts if save modal is open
+    const saveModal = document.getElementById('save-modal');
+    if (saveModal && saveModal.style.display === 'block') {
+        return;
+    }
+    
     if (!selectedParts.length) return;
     
     // Layer movement shortcuts (Page Up/Page Down or Shift + Arrow Up/Down)
     if (e.key === 'PageUp' || (e.shiftKey && e.key === 'ArrowUp')) {
         e.preventDefault();
-        moveLayerUp();
+        if (selectedParts.length > 0) {
+            const selectedPart = selectedParts[0];
+            const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+                slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+            );
+            if (slotIndex !== -1) {
+                moveSlotUp(slotIndex);
+            }
+        }
         return;
     }
     if (e.key === 'PageDown' || (e.shiftKey && e.key === 'ArrowDown')) {
         e.preventDefault();
-        moveLayerDown();
+        if (selectedParts.length > 0) {
+            const selectedPart = selectedParts[0];
+            const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+                slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+            );
+            if (slotIndex !== -1) {
+                moveSlotDown(slotIndex);
+            }
+        }
         return;
     }
     
@@ -804,7 +1180,7 @@ function handleKeyDown(e) {
     // Transform shortcuts
     if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
-        rotateSelectedPart(90);
+        rotateSelectedPart(45);
         return;
     }
     if (e.key === 'f' && !e.shiftKey) {
@@ -817,7 +1193,7 @@ function handleKeyDown(e) {
         flipSelectedPart('horizontal');
         return;
     }
-    if (e.shiftKey && e.key === '-') {
+    if (e.shiftKey && (e.key === '-' || e.key === '_')) {
         e.preventDefault();
         adjustScale(-0.1);
         return;
@@ -825,6 +1201,11 @@ function handleKeyDown(e) {
     if (e.shiftKey && (e.key === '+' || e.key === '=')) {
         e.preventDefault();
         adjustScale(0.1);
+        return;
+    }
+    if (e.key === 'Backspace') {
+        e.preventDefault();
+        removeSelectedPart();
         return;
     }
     
@@ -853,6 +1234,7 @@ function handleKeyDown(e) {
     });
     
     redrawWorkspace();
+    saveWorkspaceState();
 }
 
 // Drag and drop functions
@@ -860,25 +1242,9 @@ function startDrag(event, partIndex) {
     event.dataTransfer.setData('text/plain', partIndex);
 }
 
-// Update layers list - copied from original
+// Update layers list - now empty since we removed the layers panel
 function updateLayersList() {
-    const layersList = document.getElementById('layers-list');
-    if (!layersList) return;
-    
-    layersList.innerHTML = '';
-    
-    // Display in reverse order (top layer first)
-    for (let i = placedParts.length - 1; i >= 0; i--) {
-        const part = placedParts[i];
-        const layerItem = document.createElement('div');
-        layerItem.className = 'layer-item';
-        if (selectedParts.includes(part)) {
-            layerItem.classList.add('selected');
-        }
-        layerItem.textContent = `${placedParts.length - i}. ${part.name} - ${part.monster}`;
-        layerItem.onclick = (e) => selectLayer(i, e);
-        layersList.appendChild(layerItem);
-    }
+    // No longer needed - layers are managed through selected parts
 }
 
 // Select layer - copied from original
@@ -967,6 +1333,24 @@ function selectNextPart() {
     selectedParts = [selectedPart];
     selectedLayerIndex = nextIndex;
     
+    // Update highlighting in selected parts window
+    const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+        slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+    );
+    if (slotIndex !== -1) {
+        const selectedPartsDiv = document.getElementById('selected-parts');
+        if (selectedPartsDiv) {
+            const inventoryItems = selectedPartsDiv.querySelectorAll('.inventory-item');
+            inventoryItems.forEach((item, index) => {
+                if (index === slotIndex) {
+                    item.style.setProperty('background', '#ffffcc', 'important');
+                } else {
+                    item.style.setProperty('background', '', 'important');
+                }
+            });
+        }
+    }
+    
     redrawWorkspace();
     updateLayersList();
 }
@@ -981,28 +1365,124 @@ function selectPreviousPart() {
     selectedParts = [selectedPart];
     selectedLayerIndex = prevIndex;
     
+    // Update highlighting in selected parts window
+    const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+        slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+    );
+    if (slotIndex !== -1) {
+        const selectedPartsDiv = document.getElementById('selected-parts');
+        if (selectedPartsDiv) {
+            const inventoryItems = selectedPartsDiv.querySelectorAll('.inventory-item');
+            inventoryItems.forEach((item, index) => {
+                if (index === slotIndex) {
+                    item.style.setProperty('background', '#ffffcc', 'important');
+                } else {
+                    item.style.setProperty('background', '', 'important');
+                }
+            });
+        }
+    }
+    
     redrawWorkspace();
     updateLayersList();
 }
 
-// Layer functions
-function moveLayerUp() {
-    if (selectedLayerIndex !== null && selectedLayerIndex < placedParts.length - 1) {
-        [placedParts[selectedLayerIndex], placedParts[selectedLayerIndex + 1]] = 
-        [placedParts[selectedLayerIndex + 1], placedParts[selectedLayerIndex]];
-        selectedLayerIndex++;
+function moveSlotUp(slotIndex) {
+    if (slotIndex > 0) {
+        [selectedPartsSlots[slotIndex], selectedPartsSlots[slotIndex - 1]] = 
+        [selectedPartsSlots[slotIndex - 1], selectedPartsSlots[slotIndex]];
+        
+        const part1 = placedParts.find(p => selectedPartsSlots[slotIndex] && p.name === selectedPartsSlots[slotIndex].name && p.monster === selectedPartsSlots[slotIndex].monster);
+        const part2 = placedParts.find(p => selectedPartsSlots[slotIndex - 1] && p.name === selectedPartsSlots[slotIndex - 1].name && p.monster === selectedPartsSlots[slotIndex - 1].monster);
+        
+        if (part1 && part2) {
+            const index1 = placedParts.indexOf(part1);
+            const index2 = placedParts.indexOf(part2);
+            [placedParts[index1], placedParts[index2]] = [placedParts[index2], placedParts[index1]];
+        }
+        
+        updateSelectedPartsDisplay();
         redrawWorkspace();
-        updateLayersList();
+        
+        // Update highlighting after display refresh
+        if (selectedParts.length > 0) {
+            console.log('moveSlotUp: Updating highlighting for selectedParts:', selectedParts.map(p => `${p.name} ${p.monster}`));
+            const selectedSlotIndices = [];
+            selectedParts.forEach(selectedPart => {
+                const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+                    slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+                );
+                console.log(`Found slotIndex ${slotIndex} for part ${selectedPart.name}`);
+                if (slotIndex !== -1) {
+                    selectedSlotIndices.push(slotIndex);
+                }
+            });
+            
+            console.log('selectedSlotIndices:', selectedSlotIndices);
+            
+            setTimeout(() => {
+                const selectedPartsDiv = document.getElementById('selected-parts');
+                if (selectedPartsDiv) {
+                    const inventoryItems = selectedPartsDiv.querySelectorAll('.inventory-item');
+                    console.log('DOM inventory items count (delayed):', inventoryItems.length);
+                    inventoryItems.forEach((item, index) => {
+                        const shouldHighlight = selectedSlotIndices.includes(index);
+                        console.log(`Item ${index}: highlighting=${shouldHighlight} (delayed)`);
+                        if (shouldHighlight) {
+                            item.style.setProperty('background', '#ffffcc', 'important');
+                        } else {
+                            item.style.setProperty('background', '', 'important');
+                        }
+                    });
+                }
+            }, 10);
+        }
     }
 }
 
-function moveLayerDown() {
-    if (selectedLayerIndex !== null && selectedLayerIndex > 0) {
-        [placedParts[selectedLayerIndex], placedParts[selectedLayerIndex - 1]] = 
-        [placedParts[selectedLayerIndex - 1], placedParts[selectedLayerIndex]];
-        selectedLayerIndex--;
+function moveSlotDown(slotIndex) {
+    if (slotIndex < selectedPartsSlots.length - 1 && selectedPartsSlots[slotIndex + 1] !== null) {
+        [selectedPartsSlots[slotIndex], selectedPartsSlots[slotIndex + 1]] = 
+        [selectedPartsSlots[slotIndex + 1], selectedPartsSlots[slotIndex]];
+        
+        const part1 = placedParts.find(p => selectedPartsSlots[slotIndex] && p.name === selectedPartsSlots[slotIndex].name && p.monster === selectedPartsSlots[slotIndex].monster);
+        const part2 = placedParts.find(p => selectedPartsSlots[slotIndex + 1] && p.name === selectedPartsSlots[slotIndex + 1].name && p.monster === selectedPartsSlots[slotIndex + 1].monster);
+        
+        if (part1 && part2) {
+            const index1 = placedParts.indexOf(part1);
+            const index2 = placedParts.indexOf(part2);
+            [placedParts[index1], placedParts[index2]] = [placedParts[index2], placedParts[index1]];
+        }
+        
+        updateSelectedPartsDisplay();
         redrawWorkspace();
-        updateLayersList();
+        
+        // Update highlighting after display refresh
+        if (selectedParts.length > 0) {
+            const selectedSlotIndices = [];
+            selectedParts.forEach(selectedPart => {
+                const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+                    slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+                );
+                if (slotIndex !== -1) {
+                    selectedSlotIndices.push(slotIndex);
+                }
+            });
+            
+            setTimeout(() => {
+                const selectedPartsDiv = document.getElementById('selected-parts');
+                if (selectedPartsDiv) {
+                    const inventoryItems = selectedPartsDiv.querySelectorAll('.inventory-item');
+                    inventoryItems.forEach((item, index) => {
+                        if (selectedSlotIndices.includes(index)) {
+                            item.style.setProperty('background', '#ffffcc', 'important');
+                        } else {
+                            item.style.setProperty('background', '', 'important');
+                        }
+                    });
+                }
+            }, 10);
+        }
     }
 }
 
@@ -1017,6 +1497,14 @@ function removeSelectedPart() {
                     usedPartIds.delete(part.inventoryIndex);
                 }
                 placedParts.splice(index, 1);
+                
+                // Remove from selected parts slots
+                const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+                    slotPart && slotPart.name === part.name && slotPart.monster === part.monster
+                );
+                if (slotIndex !== -1) {
+                    selectedPartsSlots[slotIndex] = null;
+                }
             }
         });
         
@@ -1027,6 +1515,31 @@ function removeSelectedPart() {
         updateLayersList();
         updateAvailableParts();
         updatePartInventoryDisplay();
+        updateSelectedPartsDisplay();
+    }
+}
+
+function moveLayerUp() {
+    if (selectedParts.length > 0) {
+        const selectedPart = selectedParts[0];
+        const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+            slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+        );
+        if (slotIndex !== -1) {
+            moveSlotUp(slotIndex);
+        }
+    }
+}
+
+function moveLayerDown() {
+    if (selectedParts.length > 0) {
+        const selectedPart = selectedParts[0];
+        const slotIndex = selectedPartsSlots.findIndex(slotPart => 
+            slotPart && slotPart.name === selectedPart.name && slotPart.monster === selectedPart.monster
+        );
+        if (slotIndex !== -1) {
+            moveSlotDown(slotIndex);
+        }
     }
 }
 
@@ -1043,6 +1556,8 @@ function clearWorkspace() {
     updateLayersList();
     updatePartInventoryDisplay();
     updateSelectedPartsDisplay();
+    updateMonsterValue();
+    saveWorkspaceState();
 }
 
 // Undo/Redo functions
@@ -1122,8 +1637,10 @@ function restoreState(state) {
 }
 
 function updateUndoRedoButtons() {
-    document.getElementById('undo-btn').disabled = undoStack.length === 0;
-    document.getElementById('redo-btn').disabled = redoStack.length === 0;
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn) undoBtn.disabled = undoStack.length === 0;
+    if (redoBtn) redoBtn.disabled = redoStack.length === 0;
 }
 
 // Section toggle functions
@@ -1155,7 +1672,8 @@ function showTab(tabName) {
 
 // Save functions
 function openSaveModal() {
-    const value = calculateCreationValue();
+    const valueElement = document.getElementById('monster-value');
+    const value = valueElement ? valueElement.textContent : '0';
     document.getElementById('creation-value').textContent = value;
     document.getElementById('save-modal').style.display = 'block';
 }
@@ -1409,15 +1927,83 @@ document.addEventListener('DOMContentLoaded', async () => {
     ctx = workspace.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     
+    // Load and display gold
+    const gold = localStorage.getItem('gold') || localStorage.getItem('playerGold') || '0';
+    const goldElement = document.getElementById('gold-display');
+    if (goldElement) {
+        goldElement.textContent = gold;
+    }
+    
     await loadPartInventory();
+    loadWorkspaceState();
     setupWorkspace();
     await updateSelectedPartsDisplay();
+    redrawWorkspace();
     loadGallery();
     updateUndoRedoButtons();
+    updateColorPaletteDisplay();
 });
 
 // Toggle menu function
 function toggleMenu() {
     const menu = document.getElementById('menu-dropdown');
     menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+// Toast notification function
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    
+    toastMessage.textContent = message;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Color palette unlock functions
+function updateColorPaletteDisplay() {
+    const unlockedDiv = document.getElementById('colorPaletteUnlocked');
+    const lockedDiv = document.getElementById('colorPaletteLocked');
+    const unlockBtn = document.getElementById('unlockColorBtn');
+    
+    if (colorPaletteUnlocked) {
+        unlockedDiv.style.display = 'block';
+        lockedDiv.style.display = 'none';
+        displayPalettes();
+    } else {
+        unlockedDiv.style.display = 'none';
+        lockedDiv.style.display = 'block';
+        
+        const gold = parseInt(localStorage.getItem('gold')) || 0;
+        unlockBtn.disabled = gold < 1000;
+        if (gold < 1000) {
+            unlockBtn.innerHTML = '<p>UNLOCK (1000G) - Need More Gold</p>';
+        } else {
+            unlockBtn.innerHTML = '<p>UNLOCK (1000G)</p>';
+        }
+    }
+}
+
+function unlockColorPalette() {
+    const gold = parseInt(localStorage.getItem('gold')) || 0;
+    if (gold < 1000) {
+        showToast('Need 1000G to unlock this feature!');
+        return;
+    }
+    
+    localStorage.setItem('gold', gold - 1000);
+    localStorage.setItem('colorPaletteUnlocked', 'true');
+    colorPaletteUnlocked = true;
+    
+    // Update gold display
+    const goldElement = document.getElementById('gold-display');
+    if (goldElement) {
+        goldElement.textContent = gold - 1000;
+    }
+    
+    showToast('Color Palette unlocked!');
+    updateColorPaletteDisplay();
 }

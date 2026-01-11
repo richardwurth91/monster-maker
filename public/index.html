@@ -4,135 +4,118 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Monster Maker</title>
+    <link rel="stylesheet" href="RPGUI/rpgui.css">
+    <script src="RPGUI/rpgui.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Monster Maker</h1>
-        
-        <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('creator')">Create Monster</button>
-            <button class="tab-btn" onclick="showTab('gallery')">Gallery</button>
-        </div>
+    <div class="rpgui-content">
+        <div class="rpgui-container framed" style="width: 95%; max-width: none; margin: 0 auto; height: 100%;">
+            <h1>Monster Maker</h1>
+            
+            <div style="display: flex; margin-bottom: 20px; justify-content: space-between; align-items: center;">
+                <div>
+                    <button class="rpgui-button" onclick="showTab('creator')" id="creator-tab"><p>Create Monster</p></button>
+                    <button class="rpgui-button" onclick="showTab('gallery')" id="gallery-tab"><p>Gallery</p></button>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="rpgui-button" onclick="clearWorkspace()"><p>Reset</p></button>
+                    <button class="rpgui-button" id="save-btn" onclick="openSaveModal()" disabled><p>Save</p></button>
+                </div>
+            </div>
 
-        <div id="creator" class="tab-content active">
-            <div class="creator-layout">
-                <!-- Left side: Workspace -->
-                <div class="workspace-container">
-                    <div class="workspace-header">
-                        <h3>Workspace</h3>
-                        <div class="workspace-controls">
-                            <button onclick="clearWorkspace()">Clear All</button>
-                            <button id="save-btn" onclick="openSaveModal()" disabled>Save Creation</button>
-                        </div>
-                    </div>
-                    <canvas id="workspace" width="640" height="640"></canvas>
+        <div id="creator" style="display: block;">
+            <div style="display: flex; height: calc(100vh - 200px); gap: 20px;">
+                <!-- Left side: Canvas only - 50% -->
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <canvas id="workspace" width="640" height="640" style="border: 4px solid #2f4f2f; background: #e6f3e6; cursor: crosshair; width: 100%; height: auto; max-width: 100%; aspect-ratio: 1;"></canvas>
                 </div>
                 
-                <!-- Right side: Tools Panel -->
-                <div class="tools-sidebar">
-                    <!-- Monster Selection -->
-                    <div class="tool-section">
-                        <div class="section-header" onclick="toggleSection('monster-selection')">
+                <!-- Right side: Split into two columns -->
+                <div style="flex: 1; display: flex; gap: 20px;">
+                    <!-- Right column 1 -->
+                    <div style="flex: 1; overflow-y: auto;">
+                        <!-- Monster Selection -->
+                        <div class="rpgui-container framed" style="margin-bottom: 15px;">
                             <h3>Monster Selection</h3>
-                            <span class="toggle-icon">▼</span>
-                        </div>
-                        <div id="monster-selection-content" class="section-content">
-                            <button id="change-monsters-btn" onclick="openMonsterModal()">Select Monsters</button>
-                            <div class="selected-monsters">
-                                <div class="selected-monster">
-                                    <div id="selected-monster1">Not selected</div>
-                                    <div id="selected-name1"></div>
+                            <button class="rpgui-button" id="change-monsters-btn" onclick="openMonsterModal()" style="width: 100%; margin-bottom: 10px;"><p>Select Monsters</p></button>
+                            <div style="display: flex; gap: 15px;">
+                                <div style="flex: 1; text-align: center;">
+                                    <div id="selected-monster1" style="width: 64px; height: 64px; border: 2px solid #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px; font-size: 12px; color: white;">Not selected</div>
+                                    <div id="selected-name1" style="font-size: 14px; font-weight: 600; color: white;"></div>
                                 </div>
-                                <div class="selected-monster">
-                                    <div id="selected-monster2">Not selected</div>
-                                    <div id="selected-name2"></div>
+                                <div style="flex: 1; text-align: center;">
+                                    <div id="selected-monster2" style="width: 64px; height: 64px; border: 2px solid #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px; font-size: 12px; color: white;">Not selected</div>
+                                    <div id="selected-name2" style="font-size: 14px; font-weight: 600; color: white;"></div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Parts Panel -->
-                    <div class="tool-section">
-                        <div class="section-header" onclick="toggleSection('parts')">
-                            <h3>Monster Parts</h3>
-                            <span class="toggle-icon">▼</span>
-                        </div>
-                        <div id="parts-content" class="section-content">
-                            <div class="parts-container">
-                                <div class="monster-parts">
-                                    <h4 id="monster1-parts-title">Monster 1</h4>
-                                    <div id="monster1-parts"></div>
-                                </div>
-                                <div class="monster-parts">
-                                    <h4 id="monster2-parts-title">Monster 2</h4>
-                                    <div id="monster2-parts"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Color Palette -->
-                    <div class="tool-section">
-                        <div class="section-header" onclick="toggleSection('palette')">
+                        
+                        <!-- Color Palette -->
+                        <div class="rpgui-container framed" style="margin-bottom: 15px;">
                             <h3>Color Palette</h3>
-                            <span class="toggle-icon">▼</span>
-                        </div>
-                        <div id="palette-content" class="section-content">
-                            <div class="palette-controls">
-                                <button class="palette-btn active" data-palette="original" onclick="setPalette('original')">Original</button>
-                                <button class="palette-btn" data-palette="monster1" onclick="setPalette('monster1')">Monster 1</button>
-                                <button class="palette-btn" data-palette="monster2" onclick="setPalette('monster2')">Monster 2</button>
-                                <button class="palette-btn" data-palette="custom" onclick="setPalette('custom')">Custom</button>
+                            <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                                <button class="rpgui-button" data-palette="original" onclick="setPalette('original')" id="palette-original"><p>Original</p></button>
+                                <button class="rpgui-button" data-palette="monster1" onclick="setPalette('monster1')" id="palette-monster1"><p>Monster 1</p></button>
+                                <button class="rpgui-button" data-palette="monster2" onclick="setPalette('monster2')" id="palette-monster2"><p>Monster 2</p></button>
+                                <button class="rpgui-button" data-palette="custom" onclick="setPalette('custom')" id="palette-custom"><p>Custom</p></button>
                             </div>
                             <div id="palette-display"></div>
                         </div>
                     </div>
                     
-                    <!-- Transform Tools -->
-                    <div class="tool-section">
-                        <div class="section-header" onclick="toggleSection('transform')">
+                    <!-- Right column 2 -->
+                    <div style="flex: 1; overflow-y: auto;">
+                        <!-- Parts Panel -->
+                        <div class="rpgui-container framed" style="margin-bottom: 15px;">
+                            <h3>Monster Parts</h3>
+                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                <div>
+                                    <h4 id="monster1-parts-title">Monster 1</h4>
+                                    <div id="monster1-parts" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; justify-items: center;"></div>
+                                </div>
+                                <div>
+                                    <h4 id="monster2-parts-title">Monster 2</h4>
+                                    <div id="monster2-parts" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; justify-items: center;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Transform Tools -->
+                        <div class="rpgui-container framed" style="margin-bottom: 15px;">
                             <h3>Transform Tools</h3>
-                            <span class="toggle-icon">▼</span>
-                        </div>
-                        <div id="transform-content" class="section-content">
-                            <div class="transform-group">
+                            <div style="margin-bottom: 15px;">
                                 <h4>Scale</h4>
-                                <div class="button-group">
-                                    <button onclick="adjustScale(-0.25)">-</button>
-                                    <button onclick="resetScale()">Reset</button>
-                                    <button onclick="adjustScale(0.25)">+</button>
+                                <div style="display: flex; gap: 5px; justify-content: space-evenly;">
+                                    <div class="rpgui-container framed" onclick="adjustScale(-0.25)" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">-</div>
+                                    <div class="rpgui-container framed" onclick="resetScale()" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center; font-weight: bolder;">⊘</div>
+                                    <div class="rpgui-container framed" onclick="adjustScale(0.25)" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">+</div>
                                 </div>
                             </div>
-                            <div class="transform-group">
+                            <div style="margin-bottom: 15px;">
                                 <h4>Rotate</h4>
-                                <div class="button-group">
-                                    <button onclick="rotateSelectedPart(-90)">↺ 90°</button>
-                                    <button onclick="rotateSelectedPart(90)">↻ 90°</button>
+                                <div style="display: flex; gap: 5px; justify-content: space-evenly;">
+                                    <div class="rpgui-container framed" onclick="rotateSelectedPart(-90)" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↺</div>
+                                    <div class="rpgui-container framed" onclick="rotateSelectedPart(90)" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↻</div>
                                 </div>
                             </div>
-                            <div class="transform-group">
+                            <div>
                                 <h4>Flip</h4>
-                                <div class="button-group">
-                                    <button onclick="flipSelectedPart('horizontal')">↔ Horizontal</button>
-                                    <button onclick="flipSelectedPart('vertical')">↕ Vertical</button>
+                                <div style="display: flex; gap: 5px; justify-content: space-evenly;">
+                                    <div class="rpgui-container framed" onclick="flipSelectedPart('horizontal')" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↔</div>
+                                    <div class="rpgui-container framed" onclick="flipSelectedPart('vertical')" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↕</div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Layers Panel -->
-                    <div class="tool-section">
-                        <div class="section-header" onclick="toggleSection('layers')">
+                        
+                        <!-- Layers Panel -->
+                        <div class="rpgui-container framed">
                             <h3>Layers</h3>
-                            <span class="toggle-icon">▼</span>
-                        </div>
-                        <div id="layers-content" class="section-content">
-                            <div id="layers-list"></div>
-                            <div class="layer-controls">
-                                <button onclick="moveLayerUp()">Move Up</button>
-                                <button onclick="moveLayerDown()">Move Down</button>
-                                <button onclick="removeSelectedPart()">Remove</button>
+                            <div id="layers-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; margin-bottom: 10px;"></div>
+                            <div style="display: flex; gap: 5px; justify-content: space-evenly;">
+                                <div class="rpgui-container framed" onclick="moveLayerUp()" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↑</div>
+                                <div class="rpgui-container framed" onclick="moveLayerDown()" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↓</div>
+                                <div class="rpgui-container framed" onclick="removeSelectedPart()" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">🗑</div>
                             </div>
                         </div>
                     </div>
@@ -140,32 +123,32 @@
             </div>
         </div>
 
-        <div id="gallery" class="tab-content">
+        <div id="gallery" style="display: none;">
             <h2>Monster Gallery</h2>
-            <div class="gallery-filter">
-                <select id="gallery-filter" onchange="filterGallery()">
+            <div style="margin-bottom: 20px; text-align: center; display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <select id="gallery-filter" onchange="filterGallery()" class="rpgui-dropdown">
                     <option value="">All monsters</option>
                 </select>
-                <select id="author-filter" onchange="filterGallery()">
+                <select id="author-filter" onchange="filterGallery()" class="rpgui-dropdown">
                     <option value="">All authors</option>
                 </select>
-                <button onclick="resetGalleryFilters()">Reset Filters</button>
+                <button class="rpgui-button" onclick="resetGalleryFilters()"><p>Reset Filters</p></button>
             </div>
-            <div class="family-filter">
-                <button class="family-btn active" onclick="toggleFamilyFilter('ALL')" data-family="ALL">ALL</button>
-                <img class="family-btn" onclick="toggleFamilyFilter('Bird')" data-family="Bird" src="../assets/icons/family-icons/Family - Bird.png" alt="Bird" title="Bird">
-                <img class="family-btn" onclick="toggleFamilyFilter('Demon')" data-family="Demon" src="../assets/icons/family-icons/Family- Demon.png" alt="Demon" title="Demon">
-                <img class="family-btn" onclick="toggleFamilyFilter('Beast')" data-family="Beast" src="../assets/icons/family-icons/Family - Beast.png" alt="Beast" title="Beast">
-                <img class="family-btn" onclick="toggleFamilyFilter('Dragon')" data-family="Dragon" src="../assets/icons/family-icons/Family - Dragon.png" alt="Dragon" title="Dragon">
-                <img class="family-btn" onclick="toggleFamilyFilter('Material')" data-family="Material" src="../assets/icons/family-icons/Family - Material.png" alt="Material" title="Material">
-                <img class="family-btn" onclick="toggleFamilyFilter('Bug')" data-family="Bug" src="../assets/icons/family-icons/Family - Bug.png" alt="Bug" title="Bug">
-                <img class="family-btn" onclick="toggleFamilyFilter('Plant')" data-family="Plant" src="../assets/icons/family-icons/Family - Plant.png" alt="Plant" title="Plant">
-                <img class="family-btn" onclick="toggleFamilyFilter('Slime')" data-family="Slime" src="../assets/icons/family-icons/Family - Slime.png" alt="Slime" title="Slime">
-                <img class="family-btn" onclick="toggleFamilyFilter('Water')" data-family="Water" src="../assets/icons/family-icons/Family - Water.png" alt="Water" title="Water">
-                <img class="family-btn" onclick="toggleFamilyFilter('Zombie')" data-family="Zombie" src="../assets/icons/family-icons/Family - Zombie.png" alt="Zombie" title="Zombie">
-                <img class="family-btn" onclick="toggleFamilyFilter('?')" data-family="?" src="../assets/icons/family-icons/Family%20-%20%3F.png" alt="?" title="?">
+            <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button onclick="toggleFamilyFilter('ALL')" data-family="ALL" id="family-ALL" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px; padding: 8px 12px; background: linear-gradient(to bottom, #d2b48c, #a0522d); color: black; font-weight: bold; font-family: 'Press Start 2P', cursive; font-size: 16px; display: flex; align-items: center; justify-content: center;">ALL</button>
+                <img onclick="toggleFamilyFilter('Bird')" data-family="Bird" id="family-Bird" src="../assets/icons/family-icons/Family - Bird.png" alt="Bird" title="Bird" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('Demon')" data-family="Demon" id="family-Demon" src="../assets/icons/family-icons/Family- Demon.png" alt="Demon" title="Demon" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('Beast')" data-family="Beast" id="family-Beast" src="../assets/icons/family-icons/Family - Beast.png" alt="Beast" title="Beast" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('Dragon')" data-family="Dragon" id="family-Dragon" src="../assets/icons/family-icons/Family - Dragon.png" alt="Dragon" title="Dragon" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('Material')" data-family="Material" id="family-Material" src="../assets/icons/family-icons/Family - Material.png" alt="Material" title="Material" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('Bug')" data-family="Bug" id="family-Bug" src="../assets/icons/family-icons/Family - Bug.png" alt="Bug" title="Bug" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('Plant')" data-family="Plant" id="family-Plant" src="../assets/icons/family-icons/Family - Plant.png" alt="Plant" title="Plant" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('Slime')" data-family="Slime" id="family-Slime" src="../assets/icons/family-icons/Family - Slime.png" alt="Slime" title="Slime" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('Water')" data-family="Water" id="family-Water" src="../assets/icons/family-icons/Family - Water.png" alt="Water" title="Water" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('Zombie')" data-family="Zombie" id="family-Zombie" src="../assets/icons/family-icons/Family - Zombie.png" alt="Zombie" title="Zombie" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
+                <img onclick="toggleFamilyFilter('?')" data-family="?" id="family-?" src="../assets/icons/family-icons/Family%20-%20%3F.png" alt="?" title="?" style="cursor: url('RPGUI/img/cursor/point.png'), pointer; border: 3px solid #8b4513; border-radius: 0; width: 48px; height: 48px;">
             </div>
-            <div id="gallery-grid"></div>
+            <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;"></div>
         </div>
         
 
@@ -173,56 +156,58 @@
     
     <!-- Preview Modal -->
     <div id="preview-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content rpgui-container framed">
             <span class="modal-close" onclick="document.getElementById('preview-modal').style.display = 'none'">&times;</span>
             <h2 id="preview-title"></h2>
             <canvas id="preview-canvas" width="256" height="256" style="border: 2px solid black; image-rendering: pixelated;"></canvas>
             <p id="preview-parents"></p>
             <p id="preview-author"></p>
             <div class="modal-buttons">
-                <button id="remix-btn" onclick="remixCreation()">Remix</button>
+                <button class="rpgui-button" id="remix-btn" onclick="remixCreation()"><p>Remix</p></button>
             </div>
         </div>
     </div>
     
     <!-- Save Modal -->
     <div id="save-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content rpgui-container framed">
             <span class="modal-close" onclick="closeSaveModal()">&times;</span>
             <h2>Save Monster</h2>
             <input type="text" id="monster-name" placeholder="Monster name..." style="width: 100%; padding: 10px; margin: 20px 0 10px 0; font-size: 16px;">
             <input type="text" id="monster-author" placeholder="Author (optional)..." style="width: 100%; padding: 10px; margin: 10px 0 20px 0; font-size: 16px;">
             <div class="modal-buttons">
-                <button onclick="saveCreation()">Save Monster</button>
-                <button onclick="exportCanvas()">Export</button>
+                <button class="rpgui-button" onclick="saveCreation()"><p>Save Monster</p></button>
+                <button class="rpgui-button" onclick="exportCanvas()"><p>Export</p></button>
             </div>
         </div>
     </div>
     
     <!-- Monster Selection Modal -->
     <div id="monster-modal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="document.getElementById('monster-modal').style.display = 'none'">&times;</span>
-            <h2>Select Your Monsters</h2>
-            <p>Choose 2 different monsters to create your hybrid creature:</p>
-            
-            <div class="modal-monsters">
-                <div class="modal-monster-select">
-                    <h3>Monster 1</h3>
-                    <div id="modal-preview1" class="modal-preview" onclick="openMonsterSelector(1)">No monster selected</div>
-                    <button onclick="openMonsterSelector(1)">Choose Monster</button>
+        <div class="rpgui-content">
+            <div class="modal-content rpgui-container framed">
+                <span class="modal-close" onclick="document.getElementById('monster-modal').style.display = 'none'">&times;</span>
+                <h2 style="text-align: center;">Select Your Monsters</h2>
+                <p style="text-align: center;">Choose 2 different monsters to create your hybrid creature:</p>
+                
+                <div class="modal-monsters" style="display: flex; gap: 40px; justify-content: center; align-items: flex-start; margin: 30px 0;">
+                    <div class="modal-monster-select" style="text-align: center;">
+                        <h3 style="text-align: center; margin-bottom: 15px;">Choose Monster 1</h3>
+                        <div id="modal-preview1" class="modal-preview" onclick="openMonsterSelector(1)" style="margin-bottom: 15px;">No monster selected</div>
+                        <button class="rpgui-button" onclick="openMonsterSelector(1)"><p>Choose Monster</p></button>
+                    </div>
+                    
+                    <div class="modal-monster-select" style="text-align: center;">
+                        <h3 style="text-align: center; margin-bottom: 15px;">Choose Monster 2</h3>
+                        <div id="modal-preview2" class="modal-preview" onclick="openMonsterSelector(2)" style="margin-bottom: 15px;">No monster selected</div>
+                        <button class="rpgui-button" onclick="openMonsterSelector(2)"><p>Choose Monster</p></button>
+                    </div>
                 </div>
                 
-                <div class="modal-monster-select">
-                    <h3>Monster 2</h3>
-                    <div id="modal-preview2" class="modal-preview" onclick="openMonsterSelector(2)">No monster selected</div>
-                    <button onclick="openMonsterSelector(2)">Choose Monster</button>
+                <div style="text-align: center; display: flex; gap: 20px; justify-content: center;">
+                    <button class="rpgui-button" onclick="confirmMonsterSelection()" id="confirm-btn" disabled><p>Start Creating</p></button>
+                    <button class="rpgui-button" onclick="closeModalToGallery()"><p>View Gallery</p></button>
                 </div>
-            </div>
-            
-            <div class="modal-buttons">
-                <button onclick="confirmMonsterSelection()" id="confirm-btn" disabled>Start Creating</button>
-                <button onclick="closeModalToGallery()">View Gallery</button>
             </div>
         </div>
     </div>
@@ -233,7 +218,7 @@
 
 <!-- Monster Selector Modal -->
 <div id="monster-selector-modal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content rpgui-container framed">
         <span class="modal-close" onclick="document.getElementById('monster-selector-modal').style.display = 'none'">&times;</span>
         <h2 id="selector-title">Select Monster</h2>
         
