@@ -81,6 +81,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelector('h1').textContent = 'Monster Maker - Admin';
     }
     
+    // Initialize Phaser
+    initPhaser();
+    
     workspace = document.getElementById('workspace');
     ctx = workspace.getContext('2d');
     ctx.imageSmoothingEnabled = false;
@@ -129,6 +132,15 @@ async function loadMonsters() {
         const response = await fetch('/api/monsters');
         monsters = await response.json();
         
+        // Load monster sprites into Phaser if imageLoader exists
+        if (imageLoader) {
+            const textures = monsters.map(monster => ({
+                key: `monster_${monster.id}`,
+                data: monster.sprite
+            }));
+            await imageLoader.loadMultipleTextures(textures);
+        }
+        
         const selects = [
             document.getElementById('monster1'), 
             document.getElementById('monster2')
@@ -145,11 +157,8 @@ async function loadMonsters() {
                 });
             }
         });
-        
-        // Populate monster grids for modal
-        // No longer needed - using two-step modal system
     } catch (error) {
-        console.error('Error loading monsters:', error);
+        ErrorHandler.handleImageLoadError('monsters', error);
     }
 }
 
@@ -349,94 +358,29 @@ function canAddPart(partName, monsterName) {
 
 // Extract color palette from image
 function extractPalette(imageData) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    return new Promise((resolve) => {
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-            
-            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const pixels = data.data;
-            const colors = new Set();
-            
-            for (let i = 0; i < pixels.length; i += 4) {
-                const alpha = pixels[i + 3];
-                if (alpha > 0) {
-                    const r = pixels[i];
-                    const g = pixels[i + 1];
-                    const b = pixels[i + 2];
-                    colors.add(`${r},${g},${b}`);
-                }
-            }
-            
-            resolve(Array.from(colors).map(c => c.split(',').map(Number)));
-        };
-        img.src = imageData;
-    });
+    return ColorPalette.extractFromImage(imageData);
 }
 
 // Find closest color in palette
 function findClosestColor(color, palette) {
-    let minDistance = Infinity;
-    let closestColor = color;
-    
-    for (const paletteColor of palette) {
-        const distance = Math.sqrt(
-            Math.pow(color[0] - paletteColor[0], 2) +
-            Math.pow(color[1] - paletteColor[1], 2) +
-            Math.pow(color[2] - paletteColor[2], 2)
-        );
-        
-        if (distance < minDistance) {
-            minDistance = distance;
-            closestColor = paletteColor;
-        }
-    }
-    
-    return closestColor;
+    return ColorPalette.findClosest(color, palette);
 }
 
 // Apply palette to image with part ID for specific mappings
 function applyPaletteWithPartId(imageData, targetPalette, sourcePalette, partId) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
+    const mappings = {};
     
-    return new Promise((resolve) => {
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-            
-            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const pixels = data.data;
-            
-            for (let i = 0; i < pixels.length; i += 4) {
-                const alpha = pixels[i + 3];
-                if (alpha > 0) {
-                    const originalColor = [pixels[i], pixels[i + 1], pixels[i + 2]];
-                    const closestSource = findClosestColor(originalColor, sourcePalette);
-                    const targetColor = findClosestColorWithMapping(closestSource, targetPalette, partId);
-                    
-                    pixels[i] = targetColor[0];
-                    pixels[i + 1] = targetColor[1];
-                    pixels[i + 2] = targetColor[2];
-                }
-            }
-            
-            ctx.putImageData(data, 0, 0);
-            resolve(canvas.toDataURL());
-        };
-        img.src = imageData;
-    });
+    // Merge part-specific and global mappings
+    if (partId && partSpecificMappings[partId]) {
+        Object.assign(mappings, partSpecificMappings[partId]);
+    }
+    Object.assign(mappings, colorMappings);
+    
+    return ColorPalette.applyPalette(imageData, targetPalette, sourcePalette, mappings);
 }
 
 // Set color palette mode
-function setPalette(mode) {
+async function setPalette(mode) {
     console.log('setPalette called:', mode);
     currentPalette = mode;
     document.getElementById('palette-original').classList.remove('active');
@@ -444,6 +388,38 @@ function setPalette(mode) {
     document.getElementById('palette-monster2').classList.remove('active');
     document.getElementById('palette-custom').classList.remove('active');
     document.getElementById(`palette-${mode}`).classList.add('active');
+    
+    // Apply palette to all Phaser sprites
+    if (mode !== 'original' && monster1Palette.length > 0 && monster2Palette.length > 0) {
+        for (const sprite of phaserSprites) {
+            const part = sprite.partData;
+            const sourcePalette = part.monster === selectedMonsters[1]?.name ? monster1Palette : monster2Palette;
+            const targetPalette = mode === 'custom' ? sourcePalette : (mode === 'monster1' ? monster1Palette : monster2Palette);
+            
+            if (sourcePalette !== targetPalette || mode === 'custom') {
+                const mappings = {};
+                if (part.id && partSpecificMappings[part.id]) {
+                    Object.assign(mappings, partSpecificMappings[part.id]);
+                }
+                Object.assign(mappings, colorMappings);
+                
+                const newImageData = await ColorPalette.applyPalette(part.originalDataUrl, targetPalette, sourcePalette, mappings);
+                const newKey = `${part.monster}_${part.name}_${mode}_${Date.now()}`;
+                await imageLoader.loadBase64Texture(newKey, newImageData);
+                sprite.setTexture(newKey);
+            }
+        }
+    } else {
+        // Reset to original textures
+        phaserSprites.forEach(sprite => {
+            const part = sprite.partData;
+            const originalKey = `part_${part.monster}_${part.name}`;
+            if (imageLoader.hasTexture(originalKey)) {
+                sprite.setTexture(originalKey);
+            }
+        });
+    }
+    
     redrawWorkspace();
 }
 
@@ -578,7 +554,7 @@ function resetMappings() {
     selectedColorMonster = null;
     document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
     updateMappingsDisplay();
-    redrawWorkspace();
+    setPalette(currentPalette);
 }
 
 function findClosestColorWithMapping(color, palette, partId = null) {
@@ -622,37 +598,15 @@ function findClosestColorWithMapping(color, palette, partId = null) {
 
 // Apply palette with saved mappings (for gallery preview)
 function applyPaletteWithSavedMappings(imageData, targetPalette, sourcePalette, partId, savedColorMappings, savedPartSpecificMappings) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
+    const mappings = {};
     
-    return new Promise((resolve) => {
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-            
-            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const pixels = data.data;
-            
-            for (let i = 0; i < pixels.length; i += 4) {
-                const alpha = pixels[i + 3];
-                if (alpha > 0) {
-                    const originalColor = [pixels[i], pixels[i + 1], pixels[i + 2]];
-                    const closestSource = findClosestColor(originalColor, sourcePalette);
-                    const targetColor = findClosestColorWithSavedMappings(closestSource, targetPalette, partId, savedColorMappings, savedPartSpecificMappings);
-                    
-                    pixels[i] = targetColor[0];
-                    pixels[i + 1] = targetColor[1];
-                    pixels[i + 2] = targetColor[2];
-                }
-            }
-            
-            ctx.putImageData(data, 0, 0);
-            resolve(canvas.toDataURL());
-        };
-        img.src = imageData;
-    });
+    // Merge part-specific and global mappings
+    if (partId && savedPartSpecificMappings[partId]) {
+        Object.assign(mappings, savedPartSpecificMappings[partId]);
+    }
+    Object.assign(mappings, savedColorMappings);
+    
+    return ColorPalette.applyPalette(imageData, targetPalette, sourcePalette, mappings);
 }
 
 // Helper function for saved mappings
@@ -674,7 +628,7 @@ function findClosestColorWithSavedMappings(color, palette, partId, savedColorMap
 }
 
 // Update available parts list
-function updateAvailableParts() {
+async function updateAvailableParts() {
     const monster1Parts = document.getElementById('monster1-parts');
     const monster2Parts = document.getElementById('monster2-parts');
     const monster1Title = document.getElementById('monster1-parts-title');
@@ -696,7 +650,7 @@ function updateAvailableParts() {
     monster1Title.textContent = selectedMonsters[1] ? selectedMonsters[1].name : 'Monster 1';
     monster2Title.textContent = selectedMonsters[2] ? selectedMonsters[2].name : 'Monster 2';
     
-    [1, 2].forEach(slot => {
+    for (let slot = 1; slot <= 2; slot++) {
         const monster = selectedMonsters[slot];
         const container = slot === 1 ? monster1Parts : monster2Parts;
         
@@ -721,20 +675,36 @@ function updateAvailableParts() {
                 });
             }
             
-            Object.entries(parts).forEach(async ([partName, partData]) => {
+            // Load parts into Phaser
+            const partTextures = [];
+            for (const [partName, partData] of Object.entries(parts)) {
                 const croppedData = await autoCropImage(partData);
+                const textureKey = `part_${monster.name}_${partName}`;
+                partTextures.push({ key: textureKey, data: croppedData });
                 
-                availableParts.push({ name: partName, data: croppedData, monster: monster.name });
-                
+                availableParts.push({ 
+                    name: partName, 
+                    data: croppedData, 
+                    monster: monster.name,
+                    textureKey: textureKey
+                });
+            }
+            
+            if (imageLoader) {
+                await imageLoader.loadMultipleTextures(partTextures);
+            }
+            
+            // Create UI for parts
+            for (const part of availableParts.filter(p => p.monster === monster.name)) {
                 const partDiv = document.createElement('div');
                 partDiv.className = 'part-item';
-                partDiv.title = `${partName} - ${monster.name}`;
-                partDiv.dataset.partName = partName;
-                partDiv.dataset.partData = croppedData;
+                partDiv.title = `${part.name} - ${monster.name}`;
+                partDiv.dataset.partName = part.name;
+                partDiv.dataset.partData = part.data;
                 partDiv.dataset.monsterName = monster.name;
+                partDiv.dataset.textureKey = part.textureKey;
                 
-                // Check if part can be added
-                const canAdd = canAddPart(partName, monster.name);
+                const canAdd = canAddPart(part.name, monster.name);
                 if (!canAdd) {
                     partDiv.classList.add('disabled');
                     partDiv.title += ' - Limit reached';
@@ -752,26 +722,24 @@ function updateAvailableParts() {
                     partCtx.drawImage(img, 0, 0, 32, 32);
                     partDiv.appendChild(canvas);
                 };
-                img.src = croppedData;
+                img.src = part.data;
                 
                 if (canAdd) {
                     partDiv.addEventListener('dragstart', (e) => {
                         e.dataTransfer.setData('text/plain', JSON.stringify({
-                            name: partName,
-                            data: croppedData,
-                            monster: monster.name
+                            name: part.name,
+                            data: part.data,
+                            monster: monster.name,
+                            textureKey: part.textureKey
                         }));
                     });
                     
-                    // Handle click for adding parts
                     const addPartHandler = (e) => {
-                        // Add part to center of canvas (320 is half of 640)
                         const centerX = 320;
                         const centerY = 320;
-                        addPartToWorkspace(croppedData, partName, centerX, centerY, monster.name);
+                        addPartToWorkspace(part.data, part.name, centerX, centerY, monster.name);
                     };
                     
-                    // Track touch for mobile scroll detection
                     let touchStartY = 0;
                     let touchMoved = false;
                     
@@ -797,11 +765,11 @@ function updateAvailableParts() {
                 }
                 
                 partsList.appendChild(partDiv);
-            });
+            }
             
             container.appendChild(partsList);
         }
-    });
+    }
 }
 
 // Setup workspace canvas
@@ -849,7 +817,15 @@ function drawGrid() {
 
 // Add part to workspace
 function addPartToWorkspace(partDataUrl, partName, x, y, monsterName) {
+    // Validate part data
+    if (!ErrorHandler.validatePartData({ name: partName, monster: monsterName })) return;
+    
+    // Find the texture key
+    const part = availableParts.find(p => p.name === partName && p.monster === monsterName);
+    if (!part || !part.textureKey) return;
+    
     const img = new Image();
+    img.onerror = () => ErrorHandler.handleImageLoadError(partName, new Error('Image load failed'));
     img.onload = () => {
         // Calculate part dimensions
         const partWidth = img.width * 5;
@@ -859,7 +835,7 @@ function addPartToWorkspace(partDataUrl, partName, x, y, monsterName) {
         const centeredX = x - (partWidth / 2);
         const centeredY = y - (partHeight / 2);
         
-        const part = {
+        const partObj = {
             id: Date.now(),
             name: partName,
             monster: monsterName,
@@ -877,15 +853,22 @@ function addPartToWorkspace(partDataUrl, partName, x, y, monsterName) {
             flipVertical: false
         };
         
-        placedParts.push(part);
-        selectedPart = part;
-        selectedParts = [part];
+        // Add to Phaser
+        const sprite = addPhaserPart(part.textureKey, x, y, partObj);
+        if (!sprite) return;
+        
+        partObj.sprite = sprite;
+        
+        placedParts.push(partObj);
+        selectedPart = partObj;
+        selectedParts = [partObj];
+        selectedSprites = [sprite];
         selectedLayerIndex = placedParts.length - 1;
         
         // Cache the image for performance
         imageCache.set(partDataUrl, img);
         
-        redrawWorkspace();
+        updateSpriteSelection();
         updateLayersList();
         updateAvailableParts();
         updateSelectedMonstersDisplay();
@@ -1330,13 +1313,30 @@ function handleKeyDown(e) {
 
 // Clear workspace
 function clearWorkspace() {
+    // Cleanup textures before clearing
+    if (phaserScene && phaserSprites.length > 0) {
+        const activeKeys = PerformanceManager.getActiveTextureKeys(phaserSprites);
+        // Keep monster and part textures, only cleanup palette variations
+        const keysToKeep = activeKeys.filter(key => 
+            key.startsWith('monster_') || key.startsWith('part_')
+        );
+        PerformanceManager.cleanupTextures(phaserScene, keysToKeep);
+    }
+    
+    // Destroy sprites
+    phaserSprites.forEach(sprite => sprite.destroy());
+    phaserSprites = [];
+    
     placedParts = [];
     selectedPart = null;
+    selectedParts = [];
+    selectedSprites = [];
     selectedLayerIndex = -1;
     currentPalette = 'original';
     monster1Palette = [];
     monster2Palette = [];
     colorMappings = {};
+    partSpecificMappings = {};
     selectedColor1 = null;
     document.getElementById('palette-original').classList.remove('active');
     document.getElementById('palette-monster1').classList.remove('active');
@@ -1360,36 +1360,43 @@ async function saveCreation() {
     }
     
     const author = document.getElementById('monster-author').value.trim() || 'Anonymous';
-    const rawSpriteData = workspace.toDataURL();
-    const spriteData = await autoCropImage(rawSpriteData);
-    const parentMonsters = Object.values(selectedMonsters)
-        .filter(m => m)
-        .map(m => m.name);
-    
-    const creationData = {
-        placedParts: placedParts.map(part => ({
-            id: part.id,
-            name: part.name,
-            monster: part.monster,
-            dataUrl: part.dataUrl || part.originalDataUrl,
-            x: part.x,
-            y: part.y,
-            width: part.width,
-            height: part.height,
-            originalWidth: part.originalWidth,
-            originalHeight: part.originalHeight,
-            scale: part.scale,
-            rotation: part.rotation,
-            flipHorizontal: part.flipHorizontal,
-            flipVertical: part.flipVertical
-        })),
-        selectedMonsters: selectedMonsters,
-        colorMappings: colorMappings,
-        partSpecificMappings: partSpecificMappings,
-        currentPalette: currentPalette
-    };
     
     try {
+        // Capture from Phaser
+        const rawSpriteData = await ExportManager.captureWorkspace(phaserScene, phaserSprites);
+        if (!rawSpriteData) {
+            alert('No parts to save!');
+            return;
+        }
+        
+        const spriteData = await autoCropImage(rawSpriteData);
+        const parentMonsters = Object.values(selectedMonsters)
+            .filter(m => m)
+            .map(m => m.name);
+        
+        const creationData = {
+            placedParts: placedParts.map(part => ({
+                id: part.id,
+                name: part.name,
+                monster: part.monster,
+                dataUrl: part.dataUrl || part.originalDataUrl,
+                x: part.x,
+                y: part.y,
+                width: part.width,
+                height: part.height,
+                originalWidth: part.originalWidth,
+                originalHeight: part.originalHeight,
+                scale: part.scale,
+                rotation: part.rotation,
+                flipHorizontal: part.flipHorizontal,
+                flipVertical: part.flipVertical
+            })),
+            selectedMonsters: selectedMonsters,
+            colorMappings: colorMappings,
+            partSpecificMappings: partSpecificMappings,
+            currentPalette: currentPalette
+        };
+        
         const response = await fetch('/api/creations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1409,10 +1416,11 @@ async function saveCreation() {
             closeSaveModal();
             clearWorkspace();
             loadGallery();
+        } else {
+            throw new Error('Save failed');
         }
     } catch (error) {
-        console.error('Error saving creation:', error);
-        alert('Error saving monster');
+        ErrorHandler.handleSaveError(error);
     }
 }
 
@@ -1574,37 +1582,50 @@ function showCreationPreview(creation) {
 }
 
 // Remix creation - load it into the editor
-function remixCreation() {
+async function remixCreation() {
     if (!currentPreviewCreation || !currentPreviewCreation.creation_data) return;
     
     const data = JSON.parse(currentPreviewCreation.creation_data);
     
     // Clear current workspace
-    clearWorkspace();
+    phaserSprites.forEach(sprite => sprite.destroy());
+    phaserSprites = [];
+    placedParts = [];
+    selectedSprites = [];
+    selectedParts = [];
+    selectedPart = null;
     
     // Load the creation data
     selectedMonsters = data.selectedMonsters || {};
-    placedParts = data.placedParts || [];
-    colorMappings = data.colorMappings || {};
-    partSpecificMappings = data.partSpecificMappings || {};
-    currentPalette = data.currentPalette || 'original';
+    
+    const loaded = await CreationLoader.loadIntoWorkspace(
+        currentPreviewCreation.creation_data,
+        selectedMonsters,
+        imageLoader,
+        phaserScene
+    );
+    
+    placedParts = loaded.parts;
+    phaserSprites = loaded.sprites;
+    colorMappings = loaded.colorMappings;
+    partSpecificMappings = loaded.partSpecificMappings;
+    currentPalette = loaded.currentPalette;
     
     // Update UI
-    updateAvailableParts();
+    await updateAvailableParts();
     updateSelectedMonstersDisplay();
-    redrawWorkspace();
     updateLayersList();
     
     // Set palette button
-    document.querySelectorAll('.palette-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`[data-palette="${currentPalette}"]`)?.classList.add('active');
+    document.getElementById('palette-original').classList.remove('active');
+    document.getElementById('palette-monster1').classList.remove('active');
+    document.getElementById('palette-monster2').classList.remove('active');
+    document.getElementById('palette-custom').classList.remove('active');
+    document.getElementById(`palette-${currentPalette}`).classList.add('active');
     
-    // Close modal and switch to creator tab without opening monster modal
+    // Close modal and switch to creator tab
     document.getElementById('preview-modal').style.display = 'none';
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('creator').classList.add('active');
-    document.querySelector('.tab-btn').classList.add('active');
+    showTab('creator');
 }
 
 // Render creation from stored data
@@ -1854,12 +1875,12 @@ function selectLayer(index, event) {
     if (event && event.shiftKey) {
         // Multi-select with shift
         if (selectedParts.includes(clickedPart)) {
-            // Remove from selection
             selectedParts = selectedParts.filter(p => p !== clickedPart);
+            selectedSprites = selectedSprites.filter(s => s.partData !== clickedPart);
             selectedPart = selectedParts.length > 0 ? selectedParts[selectedParts.length - 1] : null;
         } else {
-            // Add to selection
             selectedParts.push(clickedPart);
+            if (clickedPart.sprite) selectedSprites.push(clickedPart.sprite);
             selectedPart = clickedPart;
         }
     } else {
@@ -1867,134 +1888,102 @@ function selectLayer(index, event) {
         selectedLayerIndex = index;
         selectedPart = clickedPart;
         selectedParts = [selectedPart];
+        selectedSprites = clickedPart.sprite ? [clickedPart.sprite] : [];
     }
     
-    redrawWorkspace();
+    updateSpriteSelection();
     updateLayersList();
 }
 
 // Move layer up (toward front)
 function moveLayerUp() {
-    if (!selectedParts.length) return;
+    if (!selectedSprites.length) return;
     
-    // Sort selected parts by their current index (highest first)
-    const sortedParts = selectedParts
-        .map(part => ({ part, index: placedParts.indexOf(part) }))
-        .sort((a, b) => b.index - a.index);
-    
-    // Move each part up if possible
-    sortedParts.forEach(({ part, index }) => {
-        if (index < placedParts.length - 1) {
-            placedParts.splice(index, 1);
-            placedParts.splice(index + 1, 0, part);
-        }
-    });
-    
-    redrawWorkspace();
-    updateLayersList();
+    LayerManager.moveUp(selectedSprites, phaserSprites);
+    syncPhaserToPlacedParts();
 }
 
 // Move layer down (toward back)
 function moveLayerDown() {
-    if (!selectedParts.length) return;
+    if (!selectedSprites.length) return;
     
-    // Sort selected parts by their current index (lowest first)
-    const sortedParts = selectedParts
-        .map(part => ({ part, index: placedParts.indexOf(part) }))
-        .sort((a, b) => a.index - b.index);
-    
-    // Move each part down if possible
-    sortedParts.forEach(({ part, index }) => {
-        const currentIndex = placedParts.indexOf(part);
-        if (currentIndex > 0) {
-            placedParts.splice(currentIndex, 1);
-            placedParts.splice(currentIndex - 1, 0, part);
-        }
-    });
-    
-    redrawWorkspace();
-    updateLayersList();
+    LayerManager.moveDown(selectedSprites, phaserSprites);
+    syncPhaserToPlacedParts();
 }
 
 // Resize selected part
 function resizeSelectedPart(scale) {
-    if (selectedPart && scale) {
-        selectedPart.scale = scale;
-        selectedPart.width = selectedPart.originalWidth * scale;
-        selectedPart.height = selectedPart.originalHeight * scale;
-        redrawWorkspace();
+    if (selectedSprites.length && scale) {
+        selectedSprites.forEach(sprite => {
+            sprite.setScale(scale * 5);
+            sprite.updatePartData();
+        });
+        syncPhaserToPlacedParts();
     }
 }
 
 // Adjust scale by increment
 function adjustScale(increment) {
-    if (selectedParts.length) {
-        selectedParts.forEach(part => {
-            const newScale = Math.max(0.25, Math.min(2, part.scale + increment));
-            part.scale = newScale;
-            part.width = part.originalWidth * newScale;
-            part.height = part.originalHeight * newScale;
-        });
-        redrawWorkspace();
+    if (selectedSprites.length) {
+        TransformManager.applyScale(selectedSprites, increment);
+        syncPhaserToPlacedParts();
     }
 }
 
 // Reset scale to 1x
 function resetScale() {
-    if (selectedParts.length) {
-        selectedParts.forEach(part => {
-            part.scale = 1;
-            part.width = part.originalWidth;
-            part.height = part.originalHeight;
-        });
-        redrawWorkspace();
+    if (selectedSprites.length) {
+        TransformManager.resetScale(selectedSprites);
+        syncPhaserToPlacedParts();
     }
 }
 
 // Rotate selected part
 function rotateSelectedPart(degrees) {
-    if (selectedParts.length) {
-        selectedParts.forEach(part => {
-            part.rotation = (part.rotation + degrees + 360) % 360;
-        });
-        redrawWorkspace();
+    if (selectedSprites.length) {
+        TransformManager.rotate(selectedSprites, degrees);
+        syncPhaserToPlacedParts();
     }
 }
 
 // Flip selected part
 function flipSelectedPart(direction) {
-    if (selectedParts.length) {
-        selectedParts.forEach(part => {
-            if (direction === 'horizontal') {
-                part.flipHorizontal = !part.flipHorizontal;
-            } else if (direction === 'vertical') {
-                part.flipVertical = !part.flipVertical;
-            }
-        });
-        redrawWorkspace();
+    if (selectedSprites.length) {
+        TransformManager.flip(selectedSprites, direction);
+        syncPhaserToPlacedParts();
     }
 }
 
 // Bring selected part to front
 function bringToFront() {
-    if (selectedLayerIndex >= 0) {
-        const part = placedParts.splice(selectedLayerIndex, 1)[0];
-        placedParts.push(part);
-        selectedLayerIndex = placedParts.length - 1;
-        redrawWorkspace();
-        updateLayersList();
-    }
+    if (!selectedSprites.length) return;
+    
+    selectedSprites.forEach(sprite => {
+        const index = phaserSprites.indexOf(sprite);
+        if (index >= 0) {
+            phaserSprites.splice(index, 1);
+            phaserSprites.push(sprite);
+        }
+    });
+    
+    LayerManager.updateDepths(phaserSprites);
+    syncPhaserToPlacedParts();
 }
 
 // Send selected part to back
 function sendToBack() {
-    if (selectedLayerIndex >= 0) {
-        const part = placedParts.splice(selectedLayerIndex, 1)[0];
-        placedParts.unshift(part);
-        selectedLayerIndex = 0;
-        redrawWorkspace();
-        updateLayersList();
-    }
+    if (!selectedSprites.length) return;
+    
+    selectedSprites.forEach(sprite => {
+        const index = phaserSprites.indexOf(sprite);
+        if (index >= 0) {
+            phaserSprites.splice(index, 1);
+            phaserSprites.unshift(sprite);
+        }
+    });
+    
+    LayerManager.updateDepths(phaserSprites);
+    syncPhaserToPlacedParts();
 }
 
 // Part selection functions
@@ -2028,22 +2017,30 @@ function selectPreviousPart() {
 
 // Remove selected part
 function removeSelectedPart() {
-    if (selectedParts.length > 0) {
+    if (selectedSprites.length > 0) {
         // Remove all selected parts
-        selectedParts.forEach(part => {
-            const index = placedParts.indexOf(part);
+        selectedSprites.forEach(sprite => {
+            const index = phaserSprites.indexOf(sprite);
             if (index >= 0) {
-                placedParts.splice(index, 1);
+                phaserSprites.splice(index, 1);
+                sprite.destroy();
+            }
+            
+            const partIndex = placedParts.indexOf(sprite.partData);
+            if (partIndex >= 0) {
+                placedParts.splice(partIndex, 1);
             }
         });
         
+        selectedSprites = [];
         selectedParts = [];
         selectedPart = null;
         selectedLayerIndex = -1;
-        redrawWorkspace();
+        
+        LayerManager.updateDepths(phaserSprites);
         updateLayersList();
-        updateAvailableParts(); // Refresh parts list to make removed parts available again
-        updateSelectedMonstersDisplay(); // Update save button state
+        updateAvailableParts();
+        updateSelectedMonstersDisplay();
     }
 }
 
@@ -2194,74 +2191,12 @@ function showTab(tabName) {
 }
 
 function exportCanvas() {
-    const exportCanvas = document.createElement('canvas');
-    const exportCtx = exportCanvas.getContext('2d');
-    exportCtx.imageSmoothingEnabled = false;
-    
-    if (placedParts.length === 0) {
-        alert('No parts to export!');
-        return;
+    try {
+        const name = document.getElementById('monster-name').value.trim() || 'monster';
+        ExportManager.exportToPNG(phaserScene, phaserSprites, name);
+    } catch (error) {
+        ErrorHandler.handleExportError(error);
     }
-    
-    // Find bounds of all parts in original pixel coordinates
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    
-    placedParts.forEach(part => {
-        const pixelX = part.x / 10;
-        const pixelY = part.y / 10;
-        const pixelWidth = part.width / 10;
-        const pixelHeight = part.height / 10;
-        
-        minX = Math.min(minX, pixelX);
-        minY = Math.min(minY, pixelY);
-        maxX = Math.max(maxX, pixelX + pixelWidth);
-        maxY = Math.max(maxY, pixelY + pixelHeight);
-    });
-    
-    const width = maxX - minX;
-    const height = maxY - minY;
-    
-    exportCanvas.width = width;
-    exportCanvas.height = height;
-    
-    // Draw parts at original pixel size
-    placedParts.forEach(part => {
-        let img = imageCache.get(part.dataUrl);
-        if (img && img.complete) {
-            exportCtx.save();
-            
-            const pixelX = part.x / 10 - minX;
-            const pixelY = part.y / 10 - minY;
-            const pixelWidth = part.width / 10;
-            const pixelHeight = part.height / 10;
-            
-            const centerX = pixelX + pixelWidth / 2;
-            const centerY = pixelY + pixelHeight / 2;
-            
-            exportCtx.translate(centerX, centerY);
-            
-            if (part.flipHorizontal || part.flipVertical) {
-                exportCtx.scale(
-                    part.flipHorizontal ? -1 : 1,
-                    part.flipVertical ? -1 : 1
-                );
-            }
-            
-            if (part.rotation) {
-                exportCtx.rotate(part.rotation * Math.PI / 180);
-            }
-            
-            exportCtx.drawImage(img, -pixelWidth / 2, -pixelHeight / 2, pixelWidth, pixelHeight);
-            exportCtx.restore();
-        }
-    });
-    
-    const link = document.createElement('a');
-    const name = document.getElementById('monster-name').value.trim() || 'monster';
-    
-    link.download = `${name}.png`;
-    link.href = exportCanvas.toDataURL();
-    link.click();
 }
 
 // Mobile-specific functions

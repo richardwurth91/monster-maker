@@ -6,6 +6,17 @@
     <title>Monster Maker</title>
     <link rel="stylesheet" href="RPGUI/rpgui.css">
     <script src="RPGUI/rpgui.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script src="utils/ImageLoader.js"></script>
+    <script src="utils/PartSprite.js"></script>
+    <script src="utils/TransformManager.js"></script>
+    <script src="utils/LayerManager.js"></script>
+    <script src="utils/ColorPalette.js"></script>
+    <script src="utils/ExportManager.js"></script>
+    <script src="utils/CreationLoader.js"></script>
+    <script src="utils/InputManager.js"></script>
+    <script src="utils/PerformanceManager.js"></script>
+    <script src="utils/ErrorHandler.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -28,7 +39,8 @@
             <div style="display: flex; height: calc(100vh - 200px); gap: 20px;">
                 <!-- Left side: Canvas only - 50% -->
                 <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                    <canvas id="workspace" width="640" height="640" style="border: 4px solid #2f4f2f; background: #e6f3e6; cursor: crosshair; width: 100%; height: auto; max-width: 100%; aspect-ratio: 1;"></canvas>
+                    <div id="phaser-workspace" style="width: 100%; height: auto; max-width: 100%; aspect-ratio: 1;"></div>
+                    <canvas id="workspace" width="640" height="640" style="display: none; border: 4px solid #2f4f2f; background: #e6f3e6; cursor: crosshair; width: 100%; height: auto; max-width: 100%; aspect-ratio: 1;"></canvas>
                 </div>
                 
                 <!-- Right side: Split into two columns -->
@@ -212,6 +224,7 @@
         </div>
     </div>
 
+    <script src="phaser-config.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

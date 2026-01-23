@@ -1,3 +1,17 @@
+/* Phaser workspace container */
+#phaser-workspace {
+    border: 4px solid #2f4f2f;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+#phaser-workspace canvas {
+    image-rendering: pixelated !important;
+    image-rendering: -moz-crisp-edges !important;
+    image-rendering: crisp-edges !important;
+}
+
 /* Custom styles for Monster Maker - Pure RPGUI */
 
 /* Override RPGUI container positioning */
@@ -7,6 +21,7 @@
 
 .rpgui-container.framed {
     border-width: 22px !important;
+    image-rendering: pixelated;
 }
 
 /* Control button styling */

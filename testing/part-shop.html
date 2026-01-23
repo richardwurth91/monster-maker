@@ -4,6 +4,8 @@
     <title>Monster Part Shop</title>
     <link rel="stylesheet" href="/RPGUI/rpgui.css">
     <script src="/RPGUI/rpgui.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script src="utils/PartPreviewScene.js"></script>
     <style>
         body { background: #2a4d3a; }
         .rpgui-container {
@@ -196,11 +198,18 @@
             display: flex;
             gap: 10px;
             z-index: 1000;
-        }
-        .bottom-right-buttons .rpgui-button p {
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'Press Start 2P';
             color: white;
             text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+            line-height: 22px;
+        }
+        .bottom-right-buttons .rpgui-button {
+            font-family: 'Press Start 2P';
+        }
+        .bottom-right-buttons .rpgui-button p {
+            color: white;
+            text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+            line-height: 22px;
         }
     </style>
 </head>
@@ -252,6 +261,9 @@
         </div>
     </div>
 
+    <!-- Hidden Phaser container -->
+    <div id="phaser-container" style="display: none;"></div>
+
     <!-- Bottom Right Buttons -->
     <div class="bottom-right-buttons">
         <div style="position: relative; display: inline-block;" class="maker-container">
@@ -260,7 +272,11 @@
         </div>
         <div style="position: relative; display: inline-block;" class="alchemy-container">
             <button class="rpgui-button" onclick="window.location.href='part-combiner.html'" style="position: relative; z-index: 2;"><p>ALCHEMY POT</p></button>
-            <img src="/assets/icons/misc/alchemy_pot/Alchemy pot_1.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px;">
+            <img src="/assets/icons/misc/alchemy_pot/Alchemy pot_1.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="alchemy-container">
+            <button class="rpgui-button" onclick="window.location.href='compendium.html'" style="position: relative; z-index: 2;"><p>COMPENDIUM</p></button>
+            <img src="/assets/icons/misc/other/library.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
         </div>
     </div>
 
@@ -297,6 +313,25 @@
         const partPrice = 10;
         let parts = [];
         let inventory = JSON.parse(localStorage.getItem('partInventory')) || [];
+        
+        // Phaser setup for part rendering
+        let phaserGame;
+        let partPreviewScene;
+        
+        function initPhaser() {
+            const config = {
+                type: Phaser.AUTO,
+                width: 200,
+                height: 200,
+                parent: 'phaser-container',
+                backgroundColor: 'transparent',
+                pixelArt: true,
+                scene: PartPreviewScene
+            };
+            
+            phaserGame = new Phaser.Game(config);
+            partPreviewScene = phaserGame.scene.getScene('PartPreviewScene');
+        }
 
         async function loadParts() {
             try {
@@ -313,8 +348,8 @@
                         const rarityOrder = { 'common': 1, 'uncommon': 2, 'rare': 3, 'epic': 4, 'legendary': 5, 'mythic': 6 };
                         const rarityLevel = rarityOrder[monster.rarity] || 1;
                         
-                        // Only include parts from common/uncommon monsters or discovered rare+ monsters
-                        if (rarityLevel < 3 || discoveredMonsters.includes(monster.name)) {
+                        // Only include parts from common monsters or discovered uncommon+ monsters
+                        if (rarityLevel < 2 || discoveredMonsters.includes(monster.name)) {
                             const monsterParts = JSON.parse(monster.parts);
                             Object.keys(monsterParts).forEach(partName => {
                                 parts.push({
@@ -428,9 +463,27 @@
                 const categoryItems = await Promise.all(
                     parts.map(async (part) => {
                         const rarityInfo = getRarity(part.rarity);
-                        const croppedSprite = await autoCropImage(part.sprite);
+                        let partIconHtml = '';
+                        
+                        // Use Phaser for rendering if available, fallback to canvas
+                        if (partPreviewScene && partPreviewScene.scene.isActive()) {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 32;
+                            canvas.height = 32;
+                            canvas.className = 'part-icon';
+                            canvas.style.cssText = 'width: 32px; height: 32px; image-rendering: pixelated;';
+                            
+                            const croppedSprite = await autoCropImage(part.sprite);
+                            partPreviewScene.renderPartToCanvas(croppedSprite, canvas, 32, 32);
+                            partIconHtml = canvas.outerHTML;
+                        } else {
+                            // Fallback to original method
+                            const croppedSprite = await autoCropImage(part.sprite);
+                            partIconHtml = `<img src="${croppedSprite}" class="part-icon" alt="${part.name}">`;
+                        }
+                        
                         return `<div class="inventory-item ${rarityInfo.class}" onclick="showPartPreview(${part.index})">
-                            <img src="${croppedSprite}" class="part-icon" alt="${part.name}">
+                            ${partIconHtml}
                             <div>
                                 <div style="font-weight: 600;">${part.name}</div>
                                 <div style="font-size: 12px;">from ${part.monster}</div>
@@ -467,7 +520,7 @@
         function showToast(message, rarity = null) {
             const toast = document.createElement('div');
             toast.className = 'toast';
-            toast.textContent = message;
+            toast.innerHTML = message; // Use innerHTML instead of textContent to support HTML
             
             if (rarity) {
                 const rarityInfo = getRarity(rarity);
@@ -568,9 +621,19 @@
             
             inventory.push(randomPart);
             
+            // Track discovered parts (all parts, regardless of rarity)
+            let discoveredParts = JSON.parse(localStorage.getItem('discoveredParts')) || [];
+            const partKey = `${randomPart.monster}_${randomPart.name}`;
+            const isNewPart = !discoveredParts.includes(partKey);
+            if (isNewPart) {
+                discoveredParts.push(partKey);
+                localStorage.setItem('discoveredParts', JSON.stringify(discoveredParts));
+            }
+            
             localStorage.setItem('partInventory', JSON.stringify(inventory));
             
-            showToast(`You got: ${randomPart.name} from ${randomPart.monster}!`, randomPart.rarity);
+            const message = `You got: ${randomPart.name} from ${randomPart.monster}!${isNewPart ? ' <span style="color: red; font-weight: bold;">NEW!</span>' : ''}`;
+            showToast(message, randomPart.rarity);
             
             updateGold();
             updateInventory();
@@ -596,21 +659,25 @@
                 localStorage.removeItem('partInventory');
                 localStorage.removeItem('activeRequests');
                 localStorage.removeItem('discoveredMonsters');
+                localStorage.removeItem('discoveredParts');
                 localStorage.removeItem('requestTimers');
                 localStorage.removeItem('rerollCosts');
                 localStorage.removeItem('fulfilledRequests');
                 localStorage.removeItem('unlockedSlots');
                 localStorage.removeItem('partCombinerTutorialCompleted');
                 localStorage.removeItem('partMonsterMakerTutorialCompleted');
+                localStorage.removeItem('reverseLookupUnlocked');
                 gold = 100;
                 inventory = [];
                 requestTimers = {};
                 rerollCosts = { daily_0: 0, daily_1: 0, daily_2: 0, weekly: 0 };
                 fulfilledRequests = {};
+                reverseLookupUnlocked = false;
                 initializeTimers();
                 updateGold();
                 updateInventory();
                 updateRequests();
+                updateReverseLookupDisplay();
                 document.getElementById('requests-section').innerHTML = '<p>No active requests</p>';
                 alert('Progress reset!');
             }
@@ -619,10 +686,24 @@
         async function showPartPreview(partIndex) {
             const part = inventory[partIndex];
             const rarityInfo = getRarity(part.rarity);
-            const croppedSprite = await autoCropImage(part.sprite);
+            
+            let previewImageSrc;
+            // Use Phaser for rendering if available, fallback to canvas
+            if (partPreviewScene && partPreviewScene.scene.isActive()) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+                
+                const croppedSprite = await autoCropImage(part.sprite);
+                partPreviewScene.renderPartToCanvas(croppedSprite, canvas, 200, 200);
+                previewImageSrc = canvas.toDataURL();
+            } else {
+                // Fallback to original method
+                previewImageSrc = await autoCropImage(part.sprite);
+            }
             
             document.getElementById('preview-part-name').textContent = part.name;
-            document.getElementById('preview-part-image').src = croppedSprite;
+            document.getElementById('preview-part-image').src = previewImageSrc;
             document.getElementById('preview-part-monster').textContent = part.monster;
             document.getElementById('preview-part-rarity').textContent = rarityInfo.name;
             document.getElementById('part-preview-modal').style.display = 'flex';
@@ -657,8 +738,36 @@
                                 const dataURL = canvas.toDataURL();
                                 monsterDisplay = `<img src="${dataURL}" style="width: 64px; height: 64px; image-rendering: pixelated;">`;
                             } else {
-                                const croppedSprite = await autoCropImage(monster.sprite);
-                                monsterDisplay = `<img src="${croppedSprite}" style="width: 64px; height: 64px; image-rendering: pixelated;">`;
+                                const img = new Image();
+                                const scaledImage = await new Promise(resolve => {
+                                    img.onload = () => {
+                                        const canvas = document.createElement('canvas');
+                                        canvas.width = 64;
+                                        canvas.height = 64;
+                                        const ctx = canvas.getContext('2d');
+                                        ctx.imageSmoothingEnabled = false;
+                                        
+                                        // Scale image to fit in 64x64 while maintaining aspect ratio
+                                        let scale = Math.min(64 / img.width, 64 / img.height);
+                                        
+                                        // If image is very small, scale it up more
+                                        if (img.width < 32 || img.height < 32) {
+                                            scale = Math.min(64 / img.width, 64 / img.height);
+                                        }
+                                        
+                                        const scaledWidth = img.width * scale;
+                                        const scaledHeight = img.height * scale;
+                                        
+                                        // Center the scaled image
+                                        const offsetX = (64 - scaledWidth) / 2;
+                                        const offsetY = (64 - scaledHeight) / 2;
+                                        
+                                        ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+                                        resolve(canvas.toDataURL());
+                                    };
+                                    img.src = monster.sprite;
+                                });
+                                monsterDisplay = `<img src="${scaledImage}" style="width: 64px; height: 64px; image-rendering: pixelated;">`;
                             }
                             
                             return `<div style="display: inline-block; margin: 5px; text-align: center; width: 120px; cursor: url('/RPGUI/img/cursor/point.png'), pointer;" onclick="showMonsterPreview(${index})">
@@ -692,12 +801,32 @@
             
             const contentWidth = maxX - minX;
             const contentHeight = maxY - minY;
-            const scale = Math.min(canvasWidth / contentWidth, canvasHeight / contentHeight);
             
-            const offsetX = (canvasWidth - contentWidth * scale) / 2;
-            const offsetY = (canvasHeight - contentHeight * scale) / 2;
+            // Scale to fit in canvas while maintaining aspect ratio
+            let scale = Math.min(canvasWidth / contentWidth, canvasHeight / contentHeight);
             
-            for (const part of data.placedParts) {
+            // If content is very small, scale it up more
+            if (contentWidth < canvasWidth / 2 || contentHeight < canvasHeight / 2) {
+                scale = Math.min(canvasWidth / contentWidth, canvasHeight / contentHeight);
+            }
+            
+            const scaledWidth = contentWidth * scale;
+            const scaledHeight = contentHeight * scale;
+            
+            const offsetX = (canvasWidth - scaledWidth) / 2;
+            const offsetY = (canvasHeight - scaledHeight) / 2;
+            
+            // Sort parts by their original order (first part = top layer, last part = bottom layer)
+            const sortedParts = [...data.placedParts].sort((a, b) => {
+                // If parts have explicit layer/depth info, use that
+                if (a.layer !== undefined && b.layer !== undefined) {
+                    return b.layer - a.layer;
+                }
+                // Otherwise reverse array order (first = top, last = bottom)
+                return data.placedParts.indexOf(b) - data.placedParts.indexOf(a);
+            });
+            
+            for (const part of sortedParts) {
                 const img = new Image();
                 await new Promise(resolve => {
                     img.onload = resolve;
@@ -709,11 +838,11 @@
                 
                 const scaledX = (part.x - minX) * scale + offsetX;
                 const scaledY = (part.y - minY) * scale + offsetY;
-                const scaledWidth = part.width * scale;
-                const scaledHeight = part.height * scale;
+                const scaledPartWidth = part.width * scale;
+                const scaledPartHeight = part.height * scale;
                 
-                const centerX = scaledX + scaledWidth / 2;
-                const centerY = scaledY + scaledHeight / 2;
+                const centerX = scaledX + scaledPartWidth / 2;
+                const centerY = scaledY + scaledPartHeight / 2;
                 
                 ctx.translate(centerX, centerY);
                 
@@ -728,7 +857,7 @@
                     ctx.rotate(part.rotation * Math.PI / 180);
                 }
                 
-                ctx.drawImage(img, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+                ctx.drawImage(img, -scaledPartWidth / 2, -scaledPartHeight / 2, scaledPartWidth, scaledPartHeight);
                 ctx.restore();
             }
         }
@@ -1206,7 +1335,35 @@
                 await renderCreationData(monster.creation_data, ctx, 64, 64);
                 return canvas.toDataURL();
             } else {
-                return await autoCropImage(monster.sprite);
+                const img = new Image();
+                return new Promise(resolve => {
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 64;
+                        canvas.height = 64;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = false;
+                        
+                        // Scale image to fit in 64x64 while maintaining aspect ratio
+                        let scale = Math.min(64 / img.width, 64 / img.height);
+                        
+                        // If image is very small, scale it up more
+                        if (img.width < 32 || img.height < 32) {
+                            scale = Math.min(64 / img.width, 64 / img.height);
+                        }
+                        
+                        const scaledWidth = img.width * scale;
+                        const scaledHeight = img.height * scale;
+                        
+                        // Center the scaled image
+                        const offsetX = (64 - scaledWidth) / 2;
+                        const offsetY = (64 - scaledHeight) / 2;
+                        
+                        ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+                        resolve(canvas.toDataURL());
+                    };
+                    img.src = monster.sprite;
+                });
             }
         }
         
@@ -1278,8 +1435,12 @@
         }
         // Initialize
         loadParts().then(() => {
+            // Initialize Phaser
+            initPhaser();
+            
             initializeTimers();
-            updateGold();
+            // Update gold display without resetting value
+            document.getElementById('goldAmount').textContent = gold;
             updateInventory();
             loadCreatedMonsters();
             updateRequests();

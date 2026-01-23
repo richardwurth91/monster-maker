@@ -3490,7 +3490,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         </monster>
       </monsters>
     </family>
-    <family name="????">
+    <family name="boss">
       <monsters>
         <monster name="LordDraco" in_story="false">
           <skills>
@@ -3836,7 +3836,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="slime"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="KingSlime">
@@ -4453,7 +4453,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="dragon"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="Orochi">
@@ -4714,7 +4714,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="beast"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="Dumbira">
@@ -4775,7 +4775,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="DarkHorn"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
         <breed-requirement monster="Orochi"/>
       </mate>
     </breed>
@@ -5224,7 +5224,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Shantak"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
         <breed-requirement monster="GoldGolem"/>
       </mate>
     </breed>
@@ -5627,7 +5627,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="bird"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="AmberWeed">
@@ -5864,7 +5864,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="plant"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="Slurperon">
@@ -6049,7 +6049,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="bug"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="Digster">
@@ -6435,7 +6435,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="demon"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="BossTroll">
@@ -6753,7 +6753,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement monster="Centasaur"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="Lionex">
@@ -7456,7 +7456,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="zombie"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="WindMerge">
@@ -7489,7 +7489,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="material"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="BombCrag">
@@ -8108,7 +8108,7 @@ https://gamefaqs.gamespot.com/gbc/525414-dragon-warrior-monsters-2-cobis-journey
         <breed-requirement family="water"/>
       </base>
       <mate>
-        <breed-requirement family="????"/>
+        <breed-requirement family="boss"/>
       </mate>
     </breed>
     <breed target="HoodSquid">

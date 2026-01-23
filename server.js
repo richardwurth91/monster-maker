@@ -10,6 +10,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 app.use('/assets', express.static('assets'));
 app.use('/testing', express.static('testing'));
+app.use('/simple_testing', express.static('simple_testing'));
 
 // Database setup
 const db = new sqlite3.Database('monsters.db');
@@ -103,6 +104,19 @@ db.serialize(() => {
     }
   });
   
+  // Add upvotes and downvotes columns
+  db.run(`ALTER TABLE creations ADD COLUMN upvotes INTEGER DEFAULT 0`, (err) => {
+    if (err && !err.message.includes('duplicate column')) {
+      console.error('Error adding upvotes column:', err);
+    }
+  });
+  
+  db.run(`ALTER TABLE creations ADD COLUMN downvotes INTEGER DEFAULT 0`, (err) => {
+    if (err && !err.message.includes('duplicate column')) {
+      console.error('Error adding downvotes column:', err);
+    }
+  });
+  
   // Add rarity column if it doesn't exist
   // db.run(`ALTER TABLE monsters ADD COLUMN rarity REAL DEFAULT 1`, (err) => {
   //   if (err && !err.message.includes('duplicate column')) {
@@ -168,6 +182,67 @@ db.serialize(() => {
 app.get('/api/monsters', (req, res) => {
   db.all('SELECT * FROM monsters', (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.get('/api/monsters/:id', (req, res) => {
+  const { id } = req.params;
+  db.get('SELECT * FROM monsters WHERE id = ?', [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Monster not found' });
+    res.json(row);
+  });
+});
+
+app.get('/api/simple-parts', (req, res) => {
+  // Query to get all simple parts with monster info
+  const query = `
+    SELECT 
+      m.name as monster_name,
+      m.family as monster_family,
+      m.rarity,
+      m.sprite as monster_sprite,
+      sp.name as part_name,
+      sp.type as part_type,
+      sp.family,
+      sp.sprite
+    FROM simple_parts sp
+    JOIN monsters m ON sp.monster_id = m.id
+    ORDER BY m.name, sp.name
+  `;
+  
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error('Error fetching simple parts:', err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+app.get('/api/parts', (req, res) => {
+  // Query to get all parts with monster info
+  const query = `
+    SELECT 
+      m.name as monster_name,
+      m.family as monster_family,
+      m.rarity,
+      m.sprite as monster_sprite,
+      p.name as part_name,
+      p.type as part_type,
+      p.family,
+      p.sprite
+    FROM parts p
+    JOIN monsters m ON p.monster_id = m.id
+    ORDER BY m.name, p.name
+  `;
+  
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error('Error fetching parts:', err);
+      return res.status(500).json({ error: err.message });
+    }
     res.json(rows);
   });
 });
@@ -468,6 +543,37 @@ app.get('/api/monster-parts/:monsterName', (req, res) => {
   } catch (error) {
     console.error('Error reading parts:', error);
     res.status(500).json({ error: 'Failed to read parts' });
+  }
+});
+
+app.post('/api/creations/:id/vote', (req, res) => {
+  const { id } = req.params;
+  const { type, rescind } = req.body;
+  
+  if (rescind) {
+    if (type === 'upvote') {
+      db.run('UPDATE creations SET upvotes = MAX(0, upvotes - 1) WHERE id = ?', [id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+      });
+    } else if (type === 'downvote') {
+      db.run('UPDATE creations SET downvotes = MAX(0, downvotes - 1) WHERE id = ?', [id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+      });
+    }
+  } else if (type === 'upvote') {
+    db.run('UPDATE creations SET upvotes = upvotes + 1 WHERE id = ?', [id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    });
+  } else if (type === 'downvote') {
+    db.run('UPDATE creations SET downvotes = downvotes + 1 WHERE id = ?', [id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    });
+  } else {
+    res.status(400).json({ error: 'Invalid vote type' });
   }
 });
 

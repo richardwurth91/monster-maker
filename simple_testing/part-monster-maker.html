@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Part-Based Monster Maker</title>
+    <link rel="stylesheet" href="../RPGUI/rpgui.css">
+    <script src="../RPGUI/rpgui.js"></script>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        /* Additional styles for part-monster-maker */
+        .inventory-part {
+            border: 2px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            background: #f9f9f9;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .inventory-part:hover {
+            border-color: #28a745;
+        }
+        .inventory-part.used {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .inventory-part.used:hover {
+            border-color: #ddd;
+        }
+        .inventory-part img {
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+        }
+        .rarity-common { background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-left: 4px solid #6c757d; }
+        .rarity-uncommon { background: linear-gradient(135deg, #d4edda, #c3e6cb); border-left: 4px solid #28a745; }
+        .rarity-rare { background: linear-gradient(135deg, #d1ecf1, #bee5eb); border-left: 4px solid #17a2b8; }
+        .rarity-epic { background: linear-gradient(135deg, #e2e3f1, #d1d2e8); border-left: 4px solid #6f42c1; }
+        .rarity-legendary { background: linear-gradient(135deg, #fff3cd, #ffeaa7); border-left: 4px solid #ffc107; }
+        .rarity-mythic { background: linear-gradient(135deg, #f8d7da, #f1b0b7); border-left: 4px solid #dc3545; }
+        .inventory-part .part-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 5px;
+        }
+        .inventory-part .part-monster {
+            font-size: 12px;
+            color: #666;
+            font-weight: normal;
+        }
+        .selected-part.filled {
+            border-color: #28a745;
+        }
+        .selected-part.filled.rarity-common { background: linear-gradient(135deg, #f8f9fa, #e9ecef); }
+        .selected-part.filled.rarity-uncommon { background: linear-gradient(135deg, #d4edda, #c3e6cb); }
+        .selected-part.filled.rarity-rare { background: linear-gradient(135deg, #d1ecf1, #bee5eb); }
+        .selected-part.filled.rarity-epic { background: linear-gradient(135deg, #e2e3f1, #d1d2e8); }
+        .selected-part.filled.rarity-legendary { background: linear-gradient(135deg, #fff3cd, #ffeaa7); }
+        .selected-part.filled.rarity-mythic { background: linear-gradient(135deg, #f8d7da, #f1b0b7); }
+        
+        /* Toast notification styles */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #dc3545;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .chop-container button,
+        .chop-container img {
+            transition: transform 0.2s ease;
+        }
+        .chop-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .chop-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .alchemy-container button,
+        .alchemy-container img {
+            transition: transform 0.2s ease;
+        }
+        .alchemy-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .alchemy-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .bottom-left-buttons {
+            position: fixed;
+            bottom: 30%;
+            left: -270px;
+            display: flex;
+            flex-direction: column;
+            gap: 120px;
+            z-index: 1000;
+            font-family: 'Press Start 2P';
+            color: white;
+            text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+            line-height: 22px;
+            transition: left 0.3s ease, transform 0.3s ease;
+            align-items: flex-end;
+            transform: translateX(0);
+        }
+        .show-left-buttons .bottom-left-buttons {
+            left: -20px;
+            align-items: center;
+            transform: translateX(50px);
+        }
+        .nav-toggle {
+            position: fixed;
+            bottom: 50%;
+            left: -30px;
+            z-index: 2000;
+            width: 40px !important;
+            height: 40px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: left 0.3s ease;
+        }
+        .nav-toggle:hover {
+            transition: all 0.3s ease;
+            left: -20px;
+        }
+
+        .show-left-buttons .nav-toggle {
+            left: 320px;
+        }
+        .container {
+            position: relative;
+            overflow: hidden;
+            min-height: 600px;
+            height: 95vh;
+        }
+        .inventory-area {
+            position: fixed !important;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 90vh;
+            padding: 20px;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+        }
+        .container.open .inventory-area {
+            right: 0;
+        }
+        .inventory-toggle {
+            position: absolute;
+            top: 20px;
+            right: -125px;
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            z-index: 15;
+            width: 80px !important;
+            height: 40px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-image-width: 12px;
+            font-size: 12px;
+            transition: right 0.3s ease;
+        }
+        .container.open .inventory-toggle {
+            right: 360px;
+        }
+        .show-buttons .inventory-toggle {
+            right: 0;
+        }
+        #combining-modal {
+            display: none;
+            position: fixed;
+            z-index: 2500;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            pointer-events: none;
+        }
+        #combining-modal.active {
+            pointer-events: auto;
+        }
+        #combining-content {
+            text-align: center;
+            pointer-events: auto;
+        }
+        .combining-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        #progress-container {
+            width: 100%;
+            height: 30px;
+            background: #333;
+            border: 3px solid #8b4513;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.1s linear;
+        }
+        #timer-text {
+            color: white;
+            font-size: 18px;
+            margin-top: 10px;
+            font-family: 'Press Start 2P', cursive;
+        }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content">
+        <div class="container">
+            <div class="rpgui-container framed" style="width: 100%; max-width: none; margin: 0 auto; height: 100%; position: fixed !important; border-image-width: 32px !important;">
+            <!-- Gold Display -->
+            <div style="position: absolute; top: 10px; left: 10px; width: 250px; padding: 8px; background: #2a3a2a; z-index: 1000;">
+                <div style="display: flex; align-items: center; gap: 8px; color: #ffd700; font-weight: bold; font-size: 14px;">
+                    <span style="font-size: 16px;">💰</span>
+                    <span id="gold-display">124</span>G
+                </div>
+            </div>
+            
+            <h1>Part-Based Monster Maker</h1>
+            <div style="text-align: center; margin-bottom: 15px; color: #ffd700; font-weight: bold; font-size: 18px;">
+                Monster Value: <span id="monster-value">0</span>G
+                <div id="bonus-text" style="font-size: 12px; color: #90EE90; margin-top: 2px;"></div>
+            </div>
+            
+            <div style="display: flex; margin-bottom: 20px; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 10px;">
+                    <button class="rpgui-button" onclick="clearWorkspace()"><p>Reset</p></button>
+                    <button class="rpgui-button" id="save-btn" onclick="openSaveModal()" disabled><p>Save</p></button>
+                </div>
+            </div>
+
+        <div id="creator" style="display: block;">
+            <div style="display: flex; height: calc(100vh - 200px); gap: 20px;">
+                <!-- Left side: Canvas only - 50% -->
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div id="phaser-workspace" style="border: 4px solid #2f4f2f; width: 90%; height: 90%; max-width: 100%; aspect-ratio: 1;"></div>
+                </div>
+                
+                <!-- Right side: Split into two columns -->
+                <div style="flex: 1; display: flex; gap: 20px;">
+                    <!-- Right column 1 -->
+                    <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
+                        <!-- Selected Parts (replaces Monster Selection) -->
+                        <div class="rpgui-container framed" style="margin-bottom: 15px;">
+                            <h3>Selected Parts (0/8)</h3>
+                            <div id="selected-parts" style="max-height: 300px; overflow-y: auto;"></div>
+                            <div style="display: flex; gap: 5px; justify-content: space-evenly; margin-top: 10px;">
+                                <div class="rpgui-container framed" onclick="moveLayerUp()" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↑</div>
+                                <div class="rpgui-container framed" onclick="moveLayerDown()" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↓</div>
+                                <div class="rpgui-container framed" onclick="removeSelectedPart()" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">🗑</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Color Palette -->
+                        <!-- <div class="rpgui-container framed" style="margin-bottom: 15px;">
+                            <h3>Color Palette</h3>
+                            <div id="colorPaletteUnlocked" style="display: none;">
+                                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                                    <button class="rpgui-button" data-palette="original" onclick="setPalette('original')" id="palette-original"><p>Original</p></button>
+                                    <button class="rpgui-button" data-palette="custom" onclick="setPalette('custom')" id="palette-custom"><p>Custom</p></button>
+                                </div>
+                                <div id="palette-display"></div>
+                            </div>
+                            <div id="colorPaletteLocked" style="text-align: center; padding: 20px;">
+                                <p>🎨 Feature Locked</p>
+                                <p>Unlock color customization for 1000G</p>
+                                <button class="rpgui-button" onclick="unlockColorPalette()" id="unlockColorBtn"><p>UNLOCK (1000G)</p></button>
+                            </div>
+                        </div> -->
+                    </div>
+                    
+                    <!-- Right column 2 -->
+                    <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
+                        <!-- Inventory (replaces Monster Parts) -->
+                        <div class="rpgui-container framed" style="margin-bottom: 15px;">
+                            <h3>Part Inventory</h3>
+                            <div id="part-inventory" style="max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                        
+                        <!-- Transform Tools -->
+                        <div class="rpgui-container framed" style="margin-bottom: 15px;">
+                            <h3>Transform Tools</h3>
+                            <div style="margin-bottom: 15px;">
+                                <h4>Scale</h4>
+                                <div style="display: flex; gap: 5px; justify-content: space-evenly;">
+                                    <div class="rpgui-container framed" onclick="adjustScale(-0.25)" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">-</div>
+                                    <div class="rpgui-container framed" onclick="resetScale()" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center; font-weight: bolder;">⊘</div>
+                                    <div class="rpgui-container framed" onclick="adjustScale(0.25)" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">+</div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <h4>Rotate</h4>
+                                <div style="display: flex; gap: 5px; justify-content: space-evenly;">
+                                    <div class="rpgui-container framed" onclick="rotateSelectedPart(-45)" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↺</div>
+                                    <div class="rpgui-container framed" onclick="rotateSelectedPart(45)" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↻</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4>Flip</h4>
+                                <div style="display: flex; gap: 5px; justify-content: space-evenly;">
+                                    <div class="rpgui-container framed" onclick="flipSelectedPart('horizontal')" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↔</div>
+                                    <div class="rpgui-container framed" onclick="flipSelectedPart('vertical')" style="flex: 1; font-size: 2em; height: 30px; min-width: 49px; max-width: 49px; text-align: center; cursor: url('../RPGUI/img/cursor/point.png'), pointer; display: flex; align-items: center; justify-content: center;">↕</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="gallery" style="display: none;">
+            <h2>Monster Gallery</h2>
+            <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;"></div>
+        </div>
+        
+        </div>
+    
+    <!-- Bottom Left Navigation -->
+    <div class="rpgui-container framed nav-toggle" style="position: fixed !important;" onclick="toggleNavigation()">→</div>
+    <div class="bottom-left-buttons">
+        <div style="position: relative; display: inline-block;" class="alchemy-container">
+            <button class="rpgui-button" onclick="window.location.href='part-combiner.html'" style="position: relative; z-index: 2;"><p>ALCHEMY POT</p></button>
+            <img src="/assets/icons/misc/alchemy_pot/Alchemy pot_1.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="chop-container">
+            <button class="rpgui-button" onclick="window.location.href='part-shop.html'" style="position: relative; z-index: 2;"><p>THE CHOP SHOP</p></button>
+            <img src="/assets/icons/misc/other/chest_of_parts_large.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="alchemy-container">
+            <button class="rpgui-button" onclick="window.location.href='compendium.html'" style="position: relative; z-index: 2;"><p>COMPENDIUM</p></button>
+            <img src="/assets/icons/misc/other/library.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span id="toast-message"></span>
+    </div>
+    
+    <!-- Save Modal -->
+    <div id="save-modal" class="modal">
+        <div class="modal-content rpgui-container framed">
+            <span class="modal-close" onclick="closeSaveModal()">&times;</span>
+            <h2 style="color: white;">Save Monster</h2>
+            <div style="margin: 10px 0; font-size: 18px; font-weight: bold; color: #28a745;">
+                Creation Value: <span id="creation-value">0</span> Gold
+            </div>
+            <input type="text" id="monster-name" placeholder="Monster name..." maxlength="21" style="width: 100%; padding: 10px; margin: 20px 0; font-size: 16px; color: white; background: #333; border: 1px solid #666;" oninput="updateCharacterCount()">
+            <div id="char-count" style="text-align: right; font-size: 12px; color: #999; margin-top: -15px; margin-bottom: 15px;">0/21</div>
+            <div class="modal-buttons">
+                <button class="rpgui-button" onclick="saveCreation()"><p>Save Monster</p></button>
+                <button class="rpgui-button" onclick="exportCanvas()"><p>Export</p></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.js"></script>
+    <script src="/utils/ImageLoader.js"></script>
+    <script src="/utils/PartSprite.js"></script>
+    <script src="/utils/TransformManager.js"></script>
+    <script src="/utils/LayerManager.js"></script>
+    <script src="/utils/ExportManager.js"></script>
+    <script src="part-maker-phaser.js"></script>
+    <script>
+        function updateCharacterCount() {
+            const input = document.getElementById('monster-name');
+            const counter = document.getElementById('char-count');
+            const current = input.value.length;
+            counter.textContent = `${current}/21`;
+            counter.style.color = current > 18 ? '#ff6b6b' : '#999';
+        }
+        
+        // Auto-crop the chest image
+        function autoCropImage(imageData) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const pixels = data.data;
+                    
+                    let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                    
+                    for (let y = 0; y < canvas.height; y++) {
+                        for (let x = 0; x < canvas.width; x++) {
+                            const alpha = pixels[(y * canvas.width + x) * 4 + 3];
+                            if (alpha > 0) {
+                                minX = Math.min(minX, x);
+                                minY = Math.min(minY, y);
+                                maxX = Math.max(maxX, x);
+                                maxY = Math.max(maxY, y);
+                            }
+                        }
+                    }
+                    
+                    if (minX < canvas.width) {
+                        const cropWidth = maxX - minX + 1;
+                        const cropHeight = maxY - minY + 1;
+                        
+                        const cropCanvas = document.createElement('canvas');
+                        const cropCtx = cropCanvas.getContext('2d');
+                        cropCanvas.width = cropWidth;
+                        cropCanvas.height = cropHeight;
+                        
+                        cropCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+                        resolve(cropCanvas.toDataURL());
+                    } else {
+                        resolve(imageData);
+                    }
+                };
+                img.src = imageData;
+            });
+        }
+        
+        // Apply auto-crop when page loads
+        window.addEventListener('load', () => {
+            autoCropImage('/assets/icons/misc/other/chest_of_parts_large.png').then(croppedImage => {
+                const chestImg = document.querySelector('.chop-container img');
+                if (chestImg) {
+                    chestImg.src = croppedImage;
+                }
+            });
+        });
+        
+        function toggleInventory() {
+            const container = document.querySelector('.container');
+            container.classList.toggle('open');
+            if (container.classList.contains('open')) {
+                updateSlidingInventory();
+            }
+        }
+        
+        function updateSlidingInventory() {
+            const inventory = JSON.parse(localStorage.getItem('partInventory')) || [];
+            const slidingInventory = document.getElementById('sliding-inventory');
+            
+            if (inventory.length === 0) {
+                slidingInventory.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No parts in inventory.<br>Visit The Chop Shop to buy parts!</p>';
+                return;
+            }
+            
+            slidingInventory.innerHTML = inventory.map((part, index) => {
+                const rarityClass = `rarity-${part.rarity || 'common'}`;
+                return `<div class="inventory-part ${rarityClass}" style="margin-bottom: 10px; padding: 10px; border: 2px solid #ddd; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <img src="${part.sprite}" style="width: 32px; height: 32px; image-rendering: pixelated;" alt="${part.name}">
+                    <div>
+                        <div class="part-name">${part.name}</div>
+                        <div class="part-monster">from ${part.monster}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        
+        function toggleNavigation() {
+            const body = document.body;
+            const button = document.querySelector('.nav-toggle');
+            body.classList.toggle('show-left-buttons');
+            button.textContent = body.classList.contains('show-left-buttons') ? '←' : '→';
+        }
+        
+        // Add hover detection for right 10% of screen
+        document.addEventListener('mousemove', (e) => {
+            const screenWidth = window.innerWidth;
+            const rightThreshold = screenWidth * 0.9;
+            const container = document.querySelector('.container');
+            const body = document.body;
+            
+            if (e.clientX >= rightThreshold || container.classList.contains('open')) {
+                container.classList.add('show-buttons');
+                body.classList.add('show-buttons');
+            } else {
+                container.classList.remove('show-buttons');
+                body.classList.remove('show-buttons');
+            }
+        });
+        
+        // Close sliding windows when clicking outside
+        document.addEventListener('click', (e) => {
+            const container = document.querySelector('.container');
+            const isToggleButton = e.target.closest('.inventory-toggle');
+            const isInsidePanel = e.target.closest('.inventory-area');
+            
+            if (!isToggleButton && !isInsidePanel && container.classList.contains('open')) {
+                container.classList.remove('open');
+            }
+        });
+    </script>
+    
+    <!-- Tutorial Modal -->
+    <div id="tutorial-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0); z-index: 3000; pointer-events: none;">
+        <div id="tutorial-spotlight" style="position: absolute; background: transparent; border-radius: 50%; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0); z-index: 3001; pointer-events: none;"></div>
+        <img id="tutorial-old-man" src="/assets/icons/misc/other/old_man_idle_animation.gif" style="position: absolute; image-rendering: pixelated; width: 100px; height: 100px; object-fit: contain; z-index: 3002; pointer-events: none;" alt="Old Man">
+        <div id="tutorial-content" style="position: absolute; background: #333; padding: 20px; border-radius: 10px; text-align: center; width: 360px; font-family: 'Press Start 2P', cursive; font-size: 12px; line-height: 1.8; color: white; pointer-events: auto;">
+            <div id="tutorial-text" style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;"></div>
+            <button class="rpgui-button" onclick="nextTutorialStep()"><p style="font-family: 'Press Start 2P', cursive; color: white;">Next</p></button>
+        </div>
+    </div>
+    
+    <script>
+        console.log('Tutorial script loaded');
+        
+        // Tutorial system
+        let tutorialStep = 0;
+        let tutorialActive = false;
+        
+        const tutorialSteps = [
+            { element: '#workspace', text: "Welcome to the Altar of Creation! This canvas is where you'll build your monster by placing parts from your inventory.", action: 'none' },
+            { element: '#part-inventory', text: "Your Part Inventory shows all the parts you've collected. Click on any part to add it to your monster.", action: 'click' },
+            { element: '#selected-parts', text: "Selected Parts shows the parts currently on your canvas. You can reorder layers and remove parts here.", action: 'none' },
+            { element: '.rpgui-container.framed:has(h3:contains("Transform Tools"))', text: "Transform Tools let you scale, rotate, and flip parts to get the perfect look for your creation.", action: 'none' },
+            { element: '#colorPaletteLocked', text: "The Color Palette allows you to customize part colors. Unlock this feature to make truly unique monsters!", action: 'none' },
+            { element: '#save-btn', text: "When you're happy with your creation, use the Save button to add it to your collection and earn gold!", action: 'none' },
+            { element: '.chop-container button', text: "Visit The Chop Shop to buy more parts for your creations. Tutorial complete!", action: 'none' }
+        ];
+        
+        // Auto-start tutorial on first visit
+        // window.addEventListener('load', () => {
+        //     console.log('Page loaded, checking tutorial flag');
+        //     const tutorialCompleted = localStorage.getItem('partMonsterMakerTutorialCompleted');
+        //     console.log('Tutorial completed flag:', tutorialCompleted);
+        //     if (!tutorialCompleted) {
+        //         console.log('Starting part-monster-maker tutorial');
+        //         setTimeout(startTutorial, 1000);
+        //     } else {
+        //         console.log('Tutorial already completed, skipping');
+        //     }
+        // });
+        
+        function startTutorial() {
+            console.log('startTutorial called');
+            tutorialStep = 0;
+            tutorialActive = true;
+            document.getElementById('tutorial-modal').style.display = 'block';
+            console.log('Tutorial modal display set to block');
+            showTutorialStep();
+        }
+        
+        function showTutorialStep() {
+            if (tutorialStep >= tutorialSteps.length) {
+                closeTutorial();
+                return;
+            }
+            
+            const step = tutorialSteps[tutorialStep];
+            const element = document.querySelector(step.element);
+            
+            if (element) {
+                positionTutorialModal(element);
+            }
+            
+            document.getElementById('tutorial-text').textContent = step.text;
+            
+            const nextBtn = document.querySelector('#tutorial-content .rpgui-button');
+            if (step.action === 'click') {
+                nextBtn.style.display = 'none';
+            } else {
+                nextBtn.style.display = 'inline-block';
+            }
+        }
+        
+        function nextTutorialStep() {
+            tutorialStep++;
+            showTutorialStep();
+        }
+        
+        function closeTutorial() {
+            tutorialActive = false;
+            document.getElementById('tutorial-modal').style.display = 'none';
+            localStorage.setItem('partMonsterMakerTutorialCompleted', 'true');
+        }
+        
+        function positionTutorialModal(element) {
+            const rect = element.getBoundingClientRect();
+            const modal = document.getElementById('tutorial-content');
+            const spotlight = document.getElementById('tutorial-spotlight');
+            const oldManImg = document.getElementById('tutorial-old-man');
+            
+            const spotlightSize = Math.max(rect.width, rect.height) + 60;
+            const spotlightX = rect.left + rect.width / 2 - spotlightSize / 2;
+            const spotlightY = rect.top + rect.height / 2 - spotlightSize / 2;
+            
+            spotlight.style.left = spotlightX + 'px';
+            spotlight.style.top = spotlightY + 'px';
+            spotlight.style.width = spotlightSize + 'px';
+            spotlight.style.height = spotlightSize + 'px';
+            spotlight.style.display = 'block';
+            
+            let left = rect.right + 20;
+            let top = rect.top;
+            
+            const modalWidth = 380;
+            const modalHeight = 300;
+            
+            left = Math.max(10, Math.min(left, window.innerWidth - modalWidth - 10));
+            top = Math.max(10, Math.min(top, window.innerHeight - modalHeight - 10));
+            
+            // Position old man to point at the target element
+            const step = tutorialSteps[tutorialStep];
+            if (step && step.action === 'click') {
+                oldManImg.src = '/assets/icons/misc/other/old_man_pointing_animation.gif';
+                
+                const targetCenterX = rect.left + rect.width / 2;
+                const targetCenterY = rect.top + rect.height / 2;
+                const modalCenterX = left + modalWidth / 2;
+                
+                // Determine if target is to the left or right of modal
+                const isTargetLeft = targetCenterX < modalCenterX;
+                
+                // Mirror the image if pointing left
+                if (isTargetLeft) {
+                    oldManImg.style.transform = 'scaleX(-1)';
+                } else {
+                    oldManImg.style.transform = 'scaleX(1)';
+                }
+                
+                // Position old man on same side as modal relative to target
+                const isModalRight = left > targetCenterX;
+                let oldManX, oldManY;
+                
+                if (isModalRight) {
+                    oldManX = Math.min(window.innerWidth - 100, targetCenterX + rect.width / 2 + 50);
+                } else {
+                    oldManX = Math.max(0, targetCenterX - rect.width / 2 - 150);
+                }
+                
+                // Adjust modal position to avoid overlap with old man
+                if (isModalRight && left < oldManX + 120) {
+                    left = oldManX + 120;
+                } else if (!isModalRight && left + modalWidth > oldManX - 20) {
+                    left = oldManX - modalWidth - 20;
+                }
+                
+                oldManY = Math.max(0, Math.min(targetCenterY - 50, window.innerHeight - 100));
+                
+                oldManImg.style.left = oldManX + 'px';
+                oldManImg.style.top = oldManY + 'px';
+                oldManImg.style.display = 'block';
+            } else {
+                // Reset to idle animation and show at top of modal for non-pointing steps
+                oldManImg.src = '/assets/icons/misc/other/old_man_idle_animation.gif';
+                oldManImg.style.transform = 'none';
+                
+                // Center the modal
+                left = (window.innerWidth - modalWidth) / 2;
+                top = (window.innerHeight - modalHeight) / 2;
+                
+                // Position old man at top of modal with padding
+                oldManImg.style.left = (left + modalWidth / 2 - 50) + 'px';
+                oldManImg.style.top = (top - 120) + 'px';
+                oldManImg.style.display = 'block';
+            }
+            
+            modal.style.left = left + 'px';
+            modal.style.top = top + 'px';
+        }
+        
+        // Check for active combining state
+        function checkCombiningState() {
+            const state = localStorage.getItem('combiningState');
+            if (state) {
+                const data = JSON.parse(state);
+                const elapsed = Date.now() - data.startTime;
+                if (elapsed < 30000) {
+                    document.getElementById('combining-modal').style.display = 'block';
+                    document.getElementById('combining-modal').classList.add('active');
+                    
+                    const remaining = 30000 - elapsed;
+                    const progress = (elapsed / 30000) * 100;
+                    document.getElementById('progress-bar').style.width = progress + '%';
+                    document.getElementById('timer-text').textContent = Math.ceil(remaining / 1000) + 's';
+                } else {
+                    localStorage.removeItem('combiningState');
+                }
+            }
+        }
+        checkCombiningState();
+        setInterval(checkCombiningState, 1000);
+    </script>
+    
+    <!-- Combining Modal -->
+    <div id="combining-modal">
+        <div class="rpgui-content">
+            <div id="combining-content" class="rpgui-container framed">
+                <h3 style="color: white; font-size: 14px;">Combining...</h3>
+                <img src="/assets/icons/misc/alchemy_pot/alchemy_pot_animation.gif" style="width: 100px; height: 100px; image-rendering: pixelated; margin: 10px 0;" alt="Alchemy Pot">
+                <div id="progress-container">
+                    <div id="progress-bar"></div>
+                </div>
+                <div id="timer-text">30s</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

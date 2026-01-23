@@ -64,7 +64,7 @@ inside your html file.
   background-position: center;
   background-size: 100% 100%;
   /* font size */
-  font-size: 1.0em;
+  /* font-size: 1.0em; */
   /* default size and display */
   max-width: 100%;
   min-width: 140px;
@@ -72,6 +72,11 @@ inside your html file.
   display: inline-block;
   /* padding */
   padding-left: 35px;
+  font-family: 'Press Start 2P';
+  color: white;
+  text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+  line-height: 22px;
+  /* font-size: 0.8em; */
   padding-right: 35px; }
 
 /* button hover */
@@ -250,6 +255,7 @@ inside your html file.
 /* game div with background image*/
 .rpgui-container.framed {
   /* border */
+  image-rendering: pixelated;
   border-style: solid;
   border-image-source: url("img/border-image.png");
   border-image-repeat: repeat;

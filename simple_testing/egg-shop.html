@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monster Egg Shop</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; display: flex; gap: 20px; }
+        .shop-area { flex: 1; }
+        .inventory-area { flex: 1; border-left: 2px solid #ccc; padding-left: 20px; }
+        .gold { font-size: 24px; margin-bottom: 20px; }
+        .eggs { display: flex; gap: 20px; margin: 20px 0; }
+        .egg { 
+            border: 2px solid #8B4513; 
+            padding: 20px; 
+            text-align: center; 
+            cursor: pointer;
+            background: linear-gradient(45deg, #DDD, #FFF);
+            border-radius: 50px;
+        }
+        .egg:hover { background: linear-gradient(45deg, #CCC, #EEE); }
+        .egg.disabled { opacity: 0.5; cursor: not-allowed; }
+        .result { margin-top: 20px; padding: 10px; background: #f0f0f0; }
+        .inventory-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            margin-bottom: 5px; 
+            background: #f9f9f9;
+        }
+        .family-icon { width: 32px; height: 32px; image-rendering: pixelated; }
+        .inventory-empty { color: #666; font-style: italic; }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 2px solid #ccc;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #666;
+            padding: 5px 15px;
+        }
+        .nav-item.active {
+            color: #28a745;
+        }
+        .nav-item span:first-child {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+        .nav-item span:last-child {
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="shop-area">
+        <h1>Monster Egg Shop</h1>
+        <div class="gold">Gold: <span id="goldAmount">100</span></div>
+        
+        <div class="eggs">
+            <div class="egg" onclick="buyEgg(1)">
+                <h3>Mystery Egg #1</h3>
+                <p>15 Gold</p>
+            </div>
+            <div class="egg" onclick="buyEgg(2)">
+                <h3>Mystery Egg #2</h3>
+                <p>15 Gold</p>
+            </div>
+            <div class="egg" onclick="buyEgg(3)">
+                <h3>Mystery Egg #3</h3>
+                <p>15 Gold</p>
+            </div>
+        </div>
+        
+        <button onclick="window.location.href='egg-doctor.html'">Egg Doctor</button>
+        <button onclick="resetProgress()">Reset Progress</button>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    
+    <nav class="bottom-nav">
+        <a href="egg-shop.html" class="nav-item active">
+            <span>🥚</span>
+            <span>Shop</span>
+        </a>
+        <a href="egg-doctor.html" class="nav-item">
+            <span>🔬</span>
+            <span>Doctor</span>
+        </a>
+        <a href="hatched-monster-maker.html" class="nav-item">
+            <span>⚒️</span>
+            <span>Maker</span>
+        </a>
+    </nav>
+    </div>
+    
+    <div class="inventory-area">
+        <h2>Inventory</h2>
+        <div id="inventory"></div>
+        
+        <h2>Hatched Monsters</h2>
+        <div id="hatched"></div>
+    </div>
+
+    <script>
+        let gold = parseInt(localStorage.getItem('gold')) || 100;
+        const eggPrice = 15;
+        let monsters = [];
+        let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+        let hatched = JSON.parse(localStorage.getItem('hatched')) || [];
+
+        async function loadMonsters() {
+            try {
+                const response = await fetch('/api/monsters');
+                monsters = await response.json();
+            } catch (error) {
+                console.error('Failed to load monsters:', error);
+                monsters = [{name: 'Slime', sprite: ''}]; // fallback
+            }
+        }
+
+        function updateGold() {
+            document.getElementById('goldAmount').textContent = gold;
+            localStorage.setItem('gold', gold);
+            document.querySelectorAll('.egg').forEach(egg => {
+                egg.classList.toggle('disabled', gold < eggPrice);
+            });
+        }
+
+        function getFamilyIconPath(family) {
+            const familyMap = {
+                'Bird': 'Family - Bird.png',
+                'Demon': 'Family- Demon.png',
+                'Beast': 'Family - Beast.png',
+                'Dragon': 'Family - Dragon.png',
+                'Material': 'Family - Material.png',
+                'Bug': 'Family - Bug.png',
+                'Plant': 'Family - Plant.png',
+                'Slime': 'Family - Slime.png',
+                'Aquatic': 'Family - Water.png',
+                'Water': 'Family - Water.png',
+                'Undead': 'Family - Zombie.png',
+                'Zombie': 'Family - Zombie.png',
+                'Nature': 'Family - Plant.png',
+                '?': 'Family - %3F.png'
+            };
+            return `/assets/icons/family-icons/${familyMap[family] || 'Family - %3F.png'}`;
+        }
+
+        function updateInventory() {
+            const inventoryDiv = document.getElementById('inventory');
+            if (inventory.length === 0) {
+                inventoryDiv.innerHTML = '<div class="inventory-empty">No monsters yet</div>';
+                return;
+            }
+            
+            inventoryDiv.innerHTML = inventory.map(monster => 
+                `<div class="inventory-item">
+                    <img src="${getFamilyIconPath(monster.family)}" class="family-icon" alt="${monster.family}">
+                    ${monster.revealed ? `<img src="${monster.sprite}" class="family-icon" alt="${monster.name}"><span>${monster.name}</span>` : ''}
+                </div>`
+            ).join('');
+        }
+
+        function updateHatched() {
+            const hatchedDiv = document.getElementById('hatched');
+            if (hatched.length === 0) {
+                hatchedDiv.innerHTML = '<div class="inventory-empty">No hatched monsters</div>';
+                return;
+            }
+            
+            hatchedDiv.innerHTML = hatched.map(monster => 
+                `<div class="inventory-item">
+                    <img src="${monster.sprite}" class="family-icon" alt="${monster.name}">
+                    <span>${monster.name}</span>
+                </div>`
+            ).join('');
+        }
+
+        function buyEgg(eggNum) {
+            if (gold < eggPrice || monsters.length === 0) return;
+            
+            gold -= eggPrice;
+            const monster = monsters[Math.floor(Math.random() * monsters.length)];
+            monster.revealed = false;
+            inventory.push(monster);
+            
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+            
+            updateGold();
+            updateInventory();
+        }
+
+        function resetProgress() {
+            if (confirm('Are you sure you want to reset all progress? This will clear your gold, inventory, and hatched monsters.')) {
+                localStorage.removeItem('gold');
+                localStorage.removeItem('inventory');
+                localStorage.removeItem('hatched');
+                gold = 100;
+                inventory = [];
+                hatched = [];
+                updateGold();
+                updateInventory();
+                updateHatched();
+            }
+        }
+
+        // Initialize
+        loadMonsters().then(() => {
+            updateGold();
+            updateInventory();
+            updateHatched();
+        });
+    </script>
+</body>
+</html>

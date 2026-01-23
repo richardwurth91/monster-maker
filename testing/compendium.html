@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster Compendium</title>
+    <link rel="stylesheet" href="/RPGUI/rpgui.css">
+    <script src="/RPGUI/rpgui.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script src="utils/PartPreviewScene.js"></script>
+    <style>
+        html, body { 
+            background: #2a4d3a; 
+            margin: 0;
+            padding: 0;
+            overflow-y: auto;
+        }
+        .main-container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .monster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .monster-item {
+            text-align: center;
+            padding: 10px;
+            border: 4px solid #666;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 120px;
+        }
+        .bottom-right-buttons {
+            /* position: fixed; */
+            bottom: 20px;
+            right: 20px;
+            /* display: flex; */
+            gap: 10px;
+            z-index: 1000;
+            font-family: 'Press Start 2P';
+            color: white;
+            text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+            line-height: 22px;
+        }
+        .monster-item.rarity-common { border-color: #6c757d; }
+        .monster-item.rarity-uncommon { border-color: #28a745; }
+        .monster-item.rarity-rare { border-color: #17a2b8; }
+        .monster-item.rarity-epic { border-color: #6f42c1; }
+        .monster-item.rarity-legendary { border-color: #ffc107; }
+        .monster-item.rarity-mythic { border-color: #dc3545; }
+        .monster-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        .monster-item.undiscovered {
+            opacity: 0.5;
+            border-color: #666;
+        }
+        .rarity-common { background: transparent; }
+        .rarity-uncommon { background: transparent; }
+        .rarity-rare { background: transparent; }
+        .rarity-epic { background: transparent; }
+        .rarity-legendary { background: transparent; }
+        .rarity-mythic { background: transparent; }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            max-height: 80vh;
+        }
+        .parts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .part-item {
+            text-align: center;
+            padding: 5px;
+            border: 4px solid transparent;
+            border-image: url('/RPGUI/img/border-image.png') 4 fill;
+            color: white;
+            text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+        }
+        .part-item.discovered {
+            border-color: #28a745;
+        }
+        .part-item.undiscovered {
+            opacity: 0.5;
+        }
+        .monster-grid .monster-item:hover {
+            color: white !important;
+        }
+        .monster-grid .monster-item {
+            color: white !important;
+        }
+        .chop-container button,
+        .chop-container img {
+            transition: transform 0.2s ease;
+        }
+        .chop-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .chop-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .alchemy-container button,
+        .alchemy-container img {
+            transition: transform 0.2s ease;
+        }
+        .alchemy-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .alchemy-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .maker-container button,
+        .maker-container img {
+            transition: transform 0.2s ease;
+        }
+        .maker-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .maker-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .bottom-left-buttons {
+            position: fixed;
+            bottom: 20px;
+            left: -270px;
+            display: flex;
+            flex-direction: column;
+            gap: 120px;
+            z-index: 1000;
+            font-family: 'Press Start 2P';
+            color: white;
+            text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+            line-height: 22px;
+            transition: left 0.3s ease, transform 0.3s ease;
+            align-items: flex-end;
+            transform: translateX(0);
+        }
+        .show-left-buttons .bottom-left-buttons {
+            left: 20px;
+            align-items: center;
+            transform: translateX(50px);
+        }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content">
+        <div class="main-container">
+            <div class="rpgui-container framed" style="position: relative;">
+                <h1>Monster Compendium</h1>
+                <p>Track your monster discovery progress</p>
+                
+                <div class="stats-grid">
+                    <div class="rpgui-container framed-grey">
+                        <h3>Discovery Progress</h3>
+                        <p><span id="discovered-count">0</span> / <span id="total-count">0</span> monsters discovered</p>
+                        <div style="width: 100%; height: 20px; background: #333; border: 1px solid #666; margin: 10px 0;">
+                            <div id="progress-bar" style="height: 100%; background: #28a745; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <p><span id="progress-percent">0</span>% Complete</p>
+                    </div>
+                    
+                    <div class="rpgui-container framed-grey">
+                        <h3>Rarity Breakdown</h3>
+                        <div id="rarity-stats"></div>
+                    </div>
+                </div>
+                
+                <div class="rpgui-container framed" style="position: relative;">
+                    <h2>All Monsters</h2>
+                    <div style="margin-bottom: 15px;">
+                        <label>Filter by Family: </label>
+                        <select id="family-filter" onchange="filterMonsters()">
+                            <option value="">All Families</option>
+                        </select>
+                        <label style="margin-left: 20px;">Filter by Rarity: </label>
+                        <select id="rarity-filter" onchange="filterMonsters()">
+                            <option value="">All Rarities</option>
+                            <option value="common">Common</option>
+                            <option value="uncommon">Uncommon</option>
+                            <option value="rare">Rare</option>
+                            <option value="epic">Epic</option>
+                            <option value="legendary">Legendary</option>
+                            <option value="mythic">Mythic</option>
+                        </select>
+                        <label style="margin-left: 20px;">
+                            <input type="checkbox" id="discovered-only" onchange="filterMonsters()"> Discovered Only
+                        </label>
+                    </div>
+                    <div class="rpgui-list-imp" style="height: 400px;">
+                        <div id="monsters-grid" class="monster-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Phaser container -->
+    <div id="phaser-container" style="display: none;"></div>
+
+    <!-- Bottom Right Buttons -->
+    <div class="bottom-left-buttons">
+        <div style="position: relative; display: inline-block;" class="maker-container">
+            <button class="rpgui-button" onclick="window.location.href='part-monster-maker.html'" style="position: relative; z-index: 2;"><p>ALTAR OF CREATION</p></button>
+            <img src="/assets/icons/misc/other/Starry Shrine Altar.png" style="position: absolute; width: 150px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="alchemy-container">
+            <button class="rpgui-button" onclick="window.location.href='part-combiner.html'" style="position: relative; z-index: 2;"><p>ALCHEMY POT</p></button>
+            <img src="/assets/icons/misc/alchemy_pot/Alchemy pot_1.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="chop-container">
+            <button class="rpgui-button" onclick="window.location.href='part-shop.html'" style="position: relative; z-index: 2;"><p>THE CHOP SHOP</p></button>
+            <img src="/assets/icons/misc/other/chest_of_parts_large.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+    </div>
+
+    <div class="bottom-right-buttons" style="position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 1000;">
+        <div style="position: relative; display: inline-block;" class="chop-container">
+            <button class="rpgui-button" onclick="window.location.href='part-shop.html'" style="position: relative; z-index: 2;"><p>THE CHOP SHOP</p></button>
+            <img src="/assets/icons/misc/other/chest_of_parts_large.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="alchemy-container">
+            <button class="rpgui-button" onclick="window.location.href='part-combiner.html'" style="position: relative; z-index: 2;"><p>ALCHEMY POT</p></button>
+            <img src="/assets/icons/misc/alchemy_pot/Alchemy pot_1.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="maker-container">
+            <button class="rpgui-button" onclick="window.location.href='part-monster-maker.html'" style="position: relative; z-index: 2;"><p>ALTAR OF CREATION</p></button>
+            <img src="/assets/icons/misc/other/Starry Shrine Altar.png" style="position: absolute; width: 150px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+    </div>
+
+    <!-- Monster Details Modal -->
+    <div id="monster-modal" class="modal rpgui-content">
+        <div class="modal-content rpgui-container framed">
+            <h2 id="modal-monster-name">Monster Details</h2>
+            <button class="rpgui-button" onclick="closeModal()" style="float: right; margin-top: -60px;">×</button>
+            <div id="modal-monster-info"></div>
+            <h3>Parts Discovery</h3>
+            <div class="rpgui-list-imp" style="height: 300px;">
+                <div id="modal-parts-grid" class="parts-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let monsters = [];
+        let discoveredMonsters = JSON.parse(localStorage.getItem('discoveredMonsters')) || [];
+        let discoveredParts = JSON.parse(localStorage.getItem('discoveredParts')) || [];
+        let phaserGame;
+        let partPreviewScene;
+        
+        function initPhaser() {
+            const config = {
+                type: Phaser.AUTO,
+                width: 200,
+                height: 200,
+                parent: 'phaser-container',
+                backgroundColor: 'transparent',
+                pixelArt: true,
+                scene: PartPreviewScene
+            };
+            
+            phaserGame = new Phaser.Game(config);
+            partPreviewScene = phaserGame.scene.getScene('PartPreviewScene');
+        }
+        
+        async function loadMonsters() {
+            try {
+                const response = await fetch('/api/monsters');
+                monsters = await response.json();
+                
+                // Populate family filter
+                const families = [...new Set(monsters.map(m => m.family).filter(f => f))].sort();
+                const familySelect = document.getElementById('family-filter');
+                families.forEach(family => {
+                    const option = document.createElement('option');
+                    option.value = family;
+                    option.textContent = family;
+                    familySelect.appendChild(option);
+                });
+                
+                updateStats();
+                displayMonsters();
+            } catch (error) {
+                console.error('Error loading monsters:', error);
+            }
+        }
+        
+        function updateStats() {
+            const totalCount = monsters.length;
+            const discoveredCount = discoveredMonsters.length;
+            const progressPercent = totalCount > 0 ? Math.round((discoveredCount / totalCount) * 100) : 0;
+            
+            document.getElementById('discovered-count').textContent = discoveredCount;
+            document.getElementById('total-count').textContent = totalCount;
+            document.getElementById('progress-percent').textContent = progressPercent;
+            document.getElementById('progress-bar').style.width = progressPercent + '%';
+            
+            // Rarity breakdown
+            const rarityStats = {};
+            const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+            
+            rarityOrder.forEach(rarity => {
+                const total = monsters.filter(m => m.rarity === rarity).length;
+                const discovered = monsters.filter(m => m.rarity === rarity && discoveredMonsters.includes(m.name)).length;
+                rarityStats[rarity] = { total, discovered };
+            });
+            
+            const statsHtml = rarityOrder.map(rarity => {
+                const stats = rarityStats[rarity];
+                if (stats.total === 0) return '';
+                return `<div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                    <span style="text-transform: capitalize;">${rarity}:</span>
+                    <span>${stats.discovered}/${stats.total}</span>
+                </div>`;
+            }).filter(html => html).join('');
+            
+            document.getElementById('rarity-stats').innerHTML = statsHtml;
+        }
+        
+        function getRarityClass(rarity) {
+            return `rarity-${rarity || 'common'}`;
+        }
+        
+        function displayMonsters() {
+            const grid = document.getElementById('monsters-grid');
+            const filteredMonsters = getFilteredMonsters();
+            
+            grid.innerHTML = '';
+            
+            filteredMonsters.forEach(monster => {
+                const isDiscovered = discoveredMonsters.includes(monster.name);
+                const item = document.createElement('div');
+                item.className = `monster-item ${getRarityClass(monster.rarity)} ${(isDiscovered || monster.rarity === 'common') ? 'discovered' : 'undiscovered'}`;
+                
+                // Check if all parts are discovered
+                let allPartsDiscovered = false;
+                if ((isDiscovered || monster.rarity === 'common') && monster.parts) {
+                    const parts = JSON.parse(monster.parts);
+                    const partKeys = Object.keys(parts).map(partName => `${monster.name}_${partName}`);
+                    allPartsDiscovered = partKeys.every(partKey => discoveredParts.includes(partKey));
+                }
+                
+                // Set background color based on discovery status
+                if (allPartsDiscovered) {
+                    item.style.backgroundColor = 'gold';
+                } else if (isDiscovered || monster.rarity === 'common') {
+                    item.style.backgroundColor = 'white';
+                }
+                
+                // Monster name
+                const name = document.createElement('div');
+                name.style.cssText = 'font-weight: bold; font-size: 10px; margin-bottom: 5px;';
+                name.textContent = (isDiscovered || monster.rarity === 'common') ? monster.name : '???????';
+                item.appendChild(name);
+                
+                // Monster image container
+                const imgContainer = document.createElement('div');
+                imgContainer.style.cssText = 'width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; margin: auto;';
+                
+                const img = document.createElement('img');
+                if (isDiscovered || monster.rarity === 'common') {
+                    img.style.cssText = 'inline-size: -webkit-fill-available; image-rendering: pixelated;';
+                    img.onload = async () => {
+                        const croppedSprite = await autoCropImage(monster.sprite);
+                        img.src = croppedSprite;
+                    };
+                    img.src = monster.sprite;
+                    imgContainer.appendChild(img);
+                } else {
+                    imgContainer.style.display = 'none';
+                }
+                item.appendChild(imgContainer);
+                
+                // Monster family icon
+                const info = document.createElement('div');
+                info.style.cssText = 'margin-top: 5px; display: flex; justify-content: center;';
+                
+                if (isDiscovered || monster.rarity === 'common') {
+                    const familyIcon = document.createElement('img');
+                    const familyName = (monster.family || 'unknown').toLowerCase();
+                    familyIcon.src = `/assets/icons/family-icons-v2/${familyName}_icon_1.png`;
+                    familyIcon.style.cssText = 'image-rendering: pixelated;';
+                    familyIcon.onload = async () => {
+                        const croppedIcon = await autoCropImage(familyIcon.src);
+                        familyIcon.src = croppedIcon;
+                        familyIcon.style.cssText = 'width: 24px; height: 24px; image-rendering: pixelated;';
+                    };
+                    familyIcon.onerror = () => {
+                        // Fallback to text if icon not found
+                        info.innerHTML = `<span style="font-size: 10px; color: white;">${monster.family || 'Unknown'} - ${monster.rarity || 'common'}</span>`;
+                    };
+                    info.appendChild(familyIcon);
+                } else {
+                    info.innerHTML = '<span style="font-size: 10px; color: white;">??? - ???</span>';
+                }
+                
+                item.appendChild(info);
+                
+                // Add click handler for discovered monsters
+                if (isDiscovered || monster.rarity === 'common') {
+                    item.style.cursor = 'pointer';
+                    item.onclick = () => showMonsterDetails(monster);
+                }
+                
+                grid.appendChild(item);
+            });
+        }
+        
+        function getFilteredMonsters() {
+            const familyFilter = document.getElementById('family-filter').value;
+            const rarityFilter = document.getElementById('rarity-filter').value;
+            const discoveredOnly = document.getElementById('discovered-only').checked;
+            
+            return monsters.filter(monster => {
+                const familyMatch = !familyFilter || monster.family === familyFilter;
+                const rarityMatch = !rarityFilter || monster.rarity === rarityFilter;
+                const discoveredMatch = !discoveredOnly || discoveredMonsters.includes(monster.name);
+                
+                return familyMatch && rarityMatch && discoveredMatch;
+            });
+        }
+        
+        function filterMonsters() {
+            displayMonsters();
+        }
+        
+        async function showMonsterDetails(monster) {
+            document.getElementById('modal-monster-name').textContent = monster.name;
+            document.getElementById('modal-monster-info').innerHTML = `
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <img src="${monster.sprite}" style="width: 128px; height: 128px; image-rendering: pixelated;">
+                </div>
+                <p><strong>Family:</strong> ${monster.family || 'Unknown'}</p>
+                <p><strong>Rarity:</strong> ${monster.rarity || 'common'}</p>
+            `;
+            
+            try {
+                const partsGrid = document.getElementById('modal-parts-grid');
+                partsGrid.innerHTML = '';
+                
+                if (monster.parts) {
+                    const parts = JSON.parse(monster.parts);
+                    Object.entries(parts).forEach(([partName, partSprite]) => {
+                        const partKey = `${monster.name}_${partName}`;
+                        const isDiscovered = discoveredParts.includes(partKey);
+                        const partItem = document.createElement('div');
+                        partItem.className = `part-item ${isDiscovered ? 'discovered' : 'undiscovered'}`;
+                        
+                        const img = document.createElement('img');
+                        if (isDiscovered) {
+                            img.src = partSprite;
+                            img.style.cssText = 'width: 48px; height: 48px; image-rendering: pixelated;';
+                        } else {
+                            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGA4nEKtAAAAABJRU5ErkJggg==';
+                            img.style.cssText = 'width: 48px; height: 48px; background: #333;';
+                        }
+                        partItem.appendChild(img);
+                        
+                        const partNameDiv = document.createElement('div');
+                        partNameDiv.style.cssText = 'font-size: 10px; margin-top: 3px;';
+                        partNameDiv.textContent = isDiscovered ? partName : '???';
+                        partItem.appendChild(partNameDiv);
+                        
+                        partsGrid.appendChild(partItem);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading monster parts:', error);
+            }
+            
+            document.getElementById('monster-modal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('monster-modal').style.display = 'none';
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initPhaser();
+            loadMonsters();
+            
+            // Auto-crop the chest image
+            autoCropImage('/assets/icons/misc/other/chest_of_parts_large.png').then(croppedImage => {
+                const chestImg = document.querySelector('.chop-container img');
+                if (chestImg) {
+                    chestImg.src = croppedImage;
+                }
+            });
+        });
+        
+        // Add hover detection for left 20% and bottom 50% of screen
+        document.addEventListener('mousemove', (e) => {
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            const leftThreshold = screenWidth * 0.2; // 20% from left
+            const bottomThreshold = screenHeight * 0.5; // 50% from top (bottom 50%)
+            const body = document.body;
+            
+            if (e.clientX <= leftThreshold && e.clientY >= bottomThreshold) {
+                body.classList.add('show-left-buttons');
+            } else {
+                body.classList.remove('show-left-buttons');
+            }
+        });
+        
+        function autoCropImage(imageData) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const pixels = data.data;
+                    
+                    let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                    
+                    for (let y = 0; y < canvas.height; y++) {
+                        for (let x = 0; x < canvas.width; x++) {
+                            const alpha = pixels[(y * canvas.width + x) * 4 + 3];
+                            if (alpha > 0) {
+                                minX = Math.min(minX, x);
+                                minY = Math.min(minY, y);
+                                maxX = Math.max(maxX, x);
+                                maxY = Math.max(maxY, y);
+                            }
+                        }
+                    }
+                    
+                    if (minX < canvas.width) {
+                        const cropWidth = maxX - minX + 1;
+                        const cropHeight = maxY - minY + 1;
+                        
+                        const cropCanvas = document.createElement('canvas');
+                        const cropCtx = cropCanvas.getContext('2d');
+                        cropCanvas.width = cropWidth;
+                        cropCanvas.height = cropHeight;
+                        
+                        cropCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+                        resolve(cropCanvas.toDataURL());
+                    } else {
+                        resolve(imageData);
+                    }
+                };
+                img.src = imageData;
+            });
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('monster-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+    </script>
+</body>
+</html>

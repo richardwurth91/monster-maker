@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Overlay Slider Button Tests</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1, h2 { color: #333; }
+        
+        /* Overlay Slider Base */
+        .slider-container {
+            position: relative;
+            height: 400px;
+            overflow: hidden;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .slider-main {
+            background: #f8f9fa;
+            height: 100%;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .slider-panel {
+            position: absolute;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 100%;
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            padding: 20px;
+            transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.2);
+            border-left: 3px solid #ff9800;
+        }
+        
+        .slider-container.open .slider-panel {
+            right: 0;
+        }
+        
+        /* Button Style 1: Corner Tab */
+        .btn-tab {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px 0 0 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .btn-tab:hover {
+            transform: translateX(-5px);
+            box-shadow: -5px 0 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .slider-container.open .btn-tab {
+            transform: translateX(-350px);
+        }
+        
+        /* Button Style 2: Floating Action Button */
+        .btn-fab {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+            z-index: 10;
+        }
+        
+        .btn-fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+        
+        .slider-container.open .btn-fab {
+            transform: translateX(-350px) rotate(45deg);
+        }
+        
+        /* Button Style 3: Edge Handle */
+        .btn-handle {
+            position: absolute;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            background: linear-gradient(45deg, #10ac84, #00d2d3);
+            color: white;
+            border: none;
+            padding: 40px 15px;
+            border-radius: 15px 0 0 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 15;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+        
+        .btn-handle:hover {
+            transform: translateY(-50%) translateX(-5px);
+            box-shadow: -5px 0 15px rgba(16, 172, 132, 0.3);
+        }
+        
+        .slider-container.open .btn-handle {
+            transform: translateY(-50%) translateX(-370px);
+        }
+        
+        /* Button Style 4: Header Toggle */
+        .btn-header {
+            position: absolute;
+            top: 0;
+            right: 20px;
+            background: linear-gradient(45deg, #a55eea, #26de81);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 0 0 12px 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+            font-weight: 600;
+        }
+        
+        .btn-header:hover {
+            transform: translateY(3px);
+            box-shadow: 0 5px 15px rgba(165, 94, 234, 0.3);
+        }
+        
+        .slider-container.open .btn-header {
+            transform: translateX(-350px);
+        }
+        
+        .sample-content {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .panel-content {
+            background: rgba(255,255,255,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .button-indicator {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            background: rgba(0,0,0,0.1);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Overlay Slider Button Tests</h1>
+    
+    <div class="test-section">
+        <h2>Button Style 1: Corner Tab</h2>
+        <div id="slider1" class="slider-container">
+            <div class="button-indicator">Style 1</div>
+            <button class="btn-tab" onclick="toggle1()">Inventory ▶</button>
+            <div class="slider-main">
+                <h3>Main Content Area</h3>
+                <div class="sample-content">Tab button in top-right corner</div>
+                <div class="sample-content">Slides with the panel when opened</div>
+                <div class="sample-content">Clean, minimal design</div>
+            </div>
+            <div class="slider-panel">
+                <h3>Inventory Panel</h3>
+                <div class="panel-content">Panel slides over main content</div>
+                <div class="panel-content">Button moves with panel</div>
+                <div class="panel-content">Easy to access and use</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Button Style 2: Floating Action Button</h2>
+        <div id="slider2" class="slider-container">
+            <div class="button-indicator">Style 2</div>
+            <button class="btn-fab" onclick="toggle2()">📦</button>
+            <div class="slider-main">
+                <h3>Main Content Area</h3>
+                <div class="sample-content">Floating action button in bottom-right</div>
+                <div class="sample-content">Rotates and moves when panel opens</div>
+                <div class="sample-content">Modern, app-like interface</div>
+            </div>
+            <div class="slider-panel">
+                <h3>Inventory Panel</h3>
+                <div class="panel-content">FAB rotates when opening</div>
+                <div class="panel-content">Distinctive circular design</div>
+                <div class="panel-content">Stands out from other elements</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Button Style 3: Edge Handle</h2>
+        <div id="slider3" class="slider-container">
+            <div class="button-indicator">Style 3</div>
+            <button class="btn-handle" onclick="toggle3()">PARTS</button>
+            <div class="slider-main">
+                <h3>Main Content Area</h3>
+                <div class="sample-content">Handle button on right edge</div>
+                <div class="sample-content">Vertical text orientation</div>
+                <div class="sample-content">Always visible and accessible</div>
+            </div>
+            <div class="slider-panel">
+                <h3>Inventory Panel</h3>
+                <div class="panel-content">Handle slides with panel</div>
+                <div class="panel-content">Vertical text design</div>
+                <div class="panel-content">Edge-based interaction</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Button Style 4: Header Toggle</h2>
+        <div id="slider4" class="slider-container">
+            <div class="button-indicator">Style 4</div>
+            <button class="btn-header" onclick="toggle4()">INVENTORY</button>
+            <div class="slider-main">
+                <h3>Main Content Area</h3>
+                <div class="sample-content">Header-style toggle button</div>
+                <div class="sample-content">Drops down from top edge</div>
+                <div class="sample-content">Tab-like appearance</div>
+            </div>
+            <div class="slider-panel">
+                <h3>Inventory Panel</h3>
+                <div class="panel-content">Header button moves with panel</div>
+                <div class="panel-content">Clean header integration</div>
+                <div class="panel-content">Professional appearance</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggle1() {
+            document.getElementById('slider1').classList.toggle('open');
+        }
+        
+        function toggle2() {
+            document.getElementById('slider2').classList.toggle('open');
+        }
+        
+        function toggle3() {
+            document.getElementById('slider3').classList.toggle('open');
+        }
+        
+        function toggle4() {
+            document.getElementById('slider4').classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

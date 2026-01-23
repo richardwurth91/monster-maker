@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auto Assembly Test</title>
+    <link rel="stylesheet" href="/RPGUI/rpgui.css">
+    <script src="/RPGUI/rpgui.js"></script>
+    <style>
+        body { background: #2a4d3a; }
+        .rpgui-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .main-layout { display: flex; gap: 20px; }
+        .canvas-area { flex: 1; }
+        .parts-list { width: 250px; max-height: 600px; overflow-y: auto; }
+        #canvas { 
+            border: 2px solid #0f380f; 
+            background: white; 
+        }
+        .part-item { 
+            padding: 10px; 
+            margin: 5px 0; 
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            border: 2px solid #306230;
+            background: #9bbc0f;
+            color: #0f380f;
+            text-align: center;
+        }
+        .part-item:hover { background: #b5d633; }
+        .controls { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content">
+        <div class="rpgui-container framed">
+            <h1>Auto Assembly Test - All Parts</h1>
+            
+            <div class="main-layout">
+                <div class="parts-list rpgui-container framed-grey">
+                    <h3>Parts with Joints</h3>
+                    <div id="parts-container"></div>
+                </div>
+                
+                <div class="canvas-area">
+                    <div class="controls">
+                        <button class="rpgui-button" onclick="clearCanvas()"><p>CLEAR</p></button>
+                        <button class="rpgui-button" onclick="autoAssemble()"><p>AUTO ASSEMBLE</p></button>
+                        <p>Click parts to place them on canvas</p>
+                    </div>
+                    
+                    <canvas id="canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let azurileParts = [];
+        let placedParts = [];
+        let usedJoints = new Set();
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        let draggedPart = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        canvas.onmousedown = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Find part under mouse
+            for (let i = placedParts.length - 1; i >= 0; i--) {
+                const part = placedParts[i];
+                if (x >= part.x && x <= part.x + part.width && y >= part.y && y <= part.y + part.height) {
+                    draggedPart = part;
+                    dragOffset.x = x - part.x;
+                    dragOffset.y = y - part.y;
+                    break;
+                }
+            }
+        };
+
+        canvas.onmousemove = (e) => {
+            if (!draggedPart) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left - dragOffset.x;
+            const y = e.clientY - rect.top - dragOffset.y;
+            
+            draggedPart.x = x;
+            draggedPart.y = y;
+            
+            // Redraw canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            placedParts.forEach(part => {
+                ctx.drawImage(part.image, part.x, part.y, part.image.width * 5, part.image.height * 5);
+                
+                // Redraw joint dots
+                part.joints.forEach(joint => {
+                    const canvasX = part.x + joint.x * 5;
+                    const canvasY = part.y + joint.y * 5;
+                    
+                    ctx.fillStyle = joint.type === 'leg' ? 'red' : joint.type === 'wing' ? 'blue' : joint.type === 'neck' ? 'green' : 'yellow';
+                    ctx.beginPath();
+                    ctx.arc(canvasX, canvasY, 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+            });
+            
+            // Log joint coordinates while dragging
+            if (draggedPart.joints.length > 0) {
+                draggedPart.joints.forEach(joint => {
+                    const canvasX = draggedPart.x + joint.x;
+                    const canvasY = draggedPart.y + joint.y;
+                    console.log(`${draggedPart.name} joint at (${canvasX}, ${canvasY})`);
+                });
+            }
+        };
+
+        canvas.onmouseup = () => {
+            draggedPart = null;
+        };
+
+        async function loadAzurileParts() {
+            const [monstersResponse, jointsResponse] = await Promise.all([
+                fetch('/api/monsters'),
+                fetch('/api/parts-with-joints')
+            ]);
+            
+            const monsters = await monstersResponse.json();
+            const allJoints = jointsResponse.ok ? await jointsResponse.json() : {};
+            
+            azurileParts = [];
+            
+            for (const monster of monsters) {
+                if (monster.parts) {
+                    const parts = JSON.parse(monster.parts);
+                    for (const [partName, sprite] of Object.entries(parts)) {
+                        const partId = `${monster.name}_${partName}`;
+                        const joints = allJoints[partId] || [];
+                        
+                        if (joints.length > 0) {
+                            const partData = {
+                                name: partName,
+                                monster: monster.name,
+                                sprite: sprite,
+                                id: partId,
+                                joints: joints
+                            };
+                            azurileParts.push(partData);
+                        }
+                    }
+                }
+            }
+            
+            displayParts();
+        }
+
+
+
+        async function loadJoints(partId) {
+            try {
+                const response = await fetch(`/api/joints/${partId}`);
+                return response.ok ? await response.json() : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function displayParts() {
+            const container = document.getElementById('parts-container');
+            container.innerHTML = azurileParts.map(part => 
+                `<div class="part-item" onclick="attachSinglePart('${part.id}')">${part.name}<br><small>${part.monster} - ${part.joints.length} joints</small></div>`
+            ).join('');
+        }
+
+        async function attachSinglePart(partId) {
+            const part = azurileParts.find(p => p.id === partId);
+            if (!part) return;
+            
+            console.log(`Placing part: ${part.name}`);
+            
+            // Place part at center
+            const tempImg = new Image();
+            tempImg.onload = () => {
+                const x = (canvas.width - tempImg.width * 5) / 2;
+                const y = (canvas.height - tempImg.height * 5) / 2;
+                placePart(part, x, y).then(() => {
+                    // Auto-attach after placing
+                    autoAssemble();
+                });
+            };
+            tempImg.src = part.sprite;
+        }
+
+        async function placePart(part, x, y) {
+            console.log(`Placing part: ${part.name} at (${x}, ${y})`);
+            const img = new Image();
+            return new Promise(resolve => {
+                img.onload = () => {
+                    const partData = {
+                        ...part,
+                        x: x,
+                        y: y,
+                        width: img.width * 5,
+                        height: img.height * 5,
+                        image: img
+                    };
+                    
+                    ctx.drawImage(img, partData.x, partData.y, img.width * 5, img.height * 5);
+                    placedParts.push(partData);
+                    
+                    // Draw joint dots for any placed part
+                    part.joints.forEach(joint => {
+                        const canvasX = partData.x + joint.x * 5;
+                        const canvasY = partData.y + joint.y * 5;
+                        
+                        ctx.fillStyle = joint.type === 'leg' ? 'red' : joint.type === 'wing' ? 'blue' : joint.type === 'neck' ? 'green' : 'yellow';
+                        ctx.beginPath();
+                        ctx.arc(canvasX, canvasY, 3, 0, 2 * Math.PI);
+                        ctx.fill();
+                    });
+                    
+                    console.log(`Successfully placed: ${part.name}`);
+                    resolve();
+                };
+                img.onerror = () => {
+                    console.error(`Failed to load image for: ${part.name}`);
+                    resolve();
+                };
+                img.src = part.sprite;
+            });
+        }
+
+        async function attachPart(newPart) {
+            console.log(`Attaching part: ${newPart.name} with ${newPart.joints.length} joints`);
+            let bestMatch = null;
+            
+            // Find first available joint match with placed parts
+            for (const placedPart of placedParts) {
+                console.log(`Checking against placed part: ${placedPart.name}`);
+                for (let i = 0; i < placedPart.joints.length; i++) {
+                    const placedJoint = placedPart.joints[i];
+                    const jointKey = `${placedPart.name}_${i}`;
+                    
+                    if (usedJoints.has(jointKey)) continue;
+                    
+                    for (const newJoint of newPart.joints) {
+                        if (placedJoint.type === newJoint.type) {
+                            console.log(`Found matching joint type: ${placedJoint.type}`);
+                            const attachX = placedPart.x + placedJoint.x * 5 - newJoint.x * 5;
+                            const attachY = placedPart.y + placedJoint.y * 5 - newJoint.y * 5;
+                            bestMatch = {
+                                placedPart,
+                                placedJoint,
+                                newJoint,
+                                jointKey,
+                                attachX,
+                                attachY
+                            };
+                            break;
+                        }
+                    }
+                    if (bestMatch) break;
+                }
+                if (bestMatch) break;
+            }
+            
+            if (bestMatch) {
+                console.log(`Attaching ${newPart.name} via ${bestMatch.placedJoint.type} joint`);
+                usedJoints.add(bestMatch.jointKey);
+                await placePart(newPart, bestMatch.attachX, bestMatch.attachY);
+            } else {
+                console.log(`No joint match found for ${newPart.name}, placing randomly`);
+                // Load image to get dimensions for centering
+                const tempImg = new Image();
+                tempImg.onload = () => {
+                    const x = (canvas.width - tempImg.width * 5) / 2;
+                    const y = (canvas.height - tempImg.height * 5) / 2;
+                    placePart(newPart, x, y);
+                };
+                tempImg.src = newPart.sprite;
+                return;
+            }
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            placedParts = [];
+            usedJoints.clear();
+            
+            // Re-place torso
+            const torso = azurileParts.find(p => p.name.toLowerCase().includes('torso'));
+            if (torso) {
+                const tempImg = new Image();
+                tempImg.onload = () => {
+                    const x = (canvas.width - tempImg.width * 5) / 2;
+                    const y = (canvas.height - tempImg.height * 5) / 2;
+                    placePart(torso, x, y);
+                };
+                tempImg.src = torso.sprite;
+            }
+        }
+
+        function autoAssemble() {
+            if (placedParts.length < 2) return;
+            
+            const takenJoints = new Set();
+            const jointPartTypes = {}; // Track what part type is attached to each joint
+            console.log('Starting auto-assembly with', placedParts.length, 'parts');
+            
+            // Keep first part in place, move others to connect
+            for (let i = 1; i < placedParts.length; i++) {
+                const newPart = placedParts[i];
+                let bestMatch = null;
+                console.log(`\nProcessing part ${i}: ${newPart.name}`);
+                
+                // Find joint match with any previously placed part
+                for (let j = 0; j < i; j++) {
+                    const placedPart = placedParts[j];
+                    console.log(`  Checking against part ${j}: ${placedPart.name}`);
+                    for (let k = 0; k < placedPart.joints.length; k++) {
+                        const placedJoint = placedPart.joints[k];
+                        const jointKey = `${j}_${k}`;
+                        
+                        console.log(`    Joint ${k} (${placedJoint.type}): key=${jointKey}, taken=${takenJoints.has(jointKey)}, partType=${jointPartTypes[jointKey] || 'none'}`);
+                        if (takenJoints.has(jointKey)) continue;
+                        
+                        for (const newJoint of newPart.joints) {
+                            if (placedJoint.type === newJoint.type) {
+                                // Normalize part names for comparison
+                                const normalizedPlacedName = placedPart.name.toLowerCase().replace(/\b(left|right)\b/g, '').trim();
+                                const normalizedNewName = newPart.name.toLowerCase().replace(/\b(left|right)\b/g, '').trim();
+                                
+                                // Prevent same part types from connecting to each other
+                                if (normalizedPlacedName === normalizedNewName) {
+                                    console.log(`    BLOCKED: Cannot connect ${newPart.name} to ${placedPart.name} (same type)`);
+                                    continue;
+                                }
+                                
+                                // Check if same part type already attached to this joint
+                                if (jointPartTypes[jointKey] === normalizedNewName) {
+                                    console.log(`    BLOCKED: ${newPart.name} type already attached to this joint`);
+                                    continue;
+                                }
+                                
+                                console.log(`    MATCH FOUND! ${placedJoint.type} joint, marking ${jointKey} as taken`);
+                                const attachX = placedPart.x + placedJoint.x * 5 - newJoint.x * 5;
+                                const attachY = placedPart.y + placedJoint.y * 5 - newJoint.y * 5;
+                                bestMatch = { jointKey, attachX, attachY };
+                                takenJoints.add(jointKey);
+                                jointPartTypes[jointKey] = normalizedNewName;
+                                console.log(`    Taken joints now:`, Array.from(takenJoints));
+                                break;
+                            }
+                        }
+                        if (bestMatch) break;
+                    }
+                    if (bestMatch) break;
+                }
+                
+                if (bestMatch) {
+                    console.log(`  Moving ${newPart.name} to (${bestMatch.attachX}, ${bestMatch.attachY})`);
+                    newPart.x = bestMatch.attachX;
+                    newPart.y = bestMatch.attachY;
+                } else {
+                    console.log(`  No match found for ${newPart.name}, staying at (${newPart.x}, ${newPart.y})`);
+                }
+            }
+            
+            // Second pass: Priority attachment system
+            console.log('\nSecond pass: Priority attachments');
+            const priorities = {
+                'leg': ['arm', 'tail'],
+                'arm': ['leg', 'wing'],
+                'head': ['arm', 'tail'],
+                'wing': ['leg', 'arm'],
+                'hand': ['foot', 'arm', 'leg'],
+                'foot': ['hand', 'leg', 'arm'],
+                'tail': ['wing', 'arm', 'leg']
+            };
+            
+            for (let i = 1; i < placedParts.length; i++) {
+                const newPart = placedParts[i];
+                const normalizedNewName = newPart.name.toLowerCase().replace(/\b(left|right)\b/g, '').trim();
+                
+                // Skip if this part type doesn't have priorities
+                if (!priorities[normalizedNewName]) continue;
+                
+                // Check if already attached
+                let alreadyAttached = false;
+                for (const jointKey of takenJoints) {
+                    if (jointPartTypes[jointKey] === normalizedNewName) {
+                        const [partIndex, jointIndex] = jointKey.split('_').map(Number);
+                        const targetPart = placedParts[partIndex];
+                        const targetJoint = targetPart.joints[jointIndex];
+                        const expectedX = targetPart.x + targetJoint.x * 5 - newPart.joints[0].x * 5;
+                        const expectedY = targetPart.y + targetJoint.y * 5 - newPart.joints[0].y * 5;
+                        if (Math.abs(newPart.x - expectedX) < 5 && Math.abs(newPart.y - expectedY) < 5) {
+                            alreadyAttached = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (alreadyAttached) continue;
+                
+                console.log(`  Checking unattached ${normalizedNewName}: ${newPart.name}`);
+                
+                // Try each priority joint type in order
+                let attached = false;
+                for (const priorityJointType of priorities[normalizedNewName]) {
+                    if (attached) break;
+                    
+                    for (let j = 0; j < placedParts.length; j++) {
+                        if (j === i) continue;
+                        const placedPart = placedParts[j];
+                        
+                        for (let k = 0; k < placedPart.joints.length; k++) {
+                            const placedJoint = placedPart.joints[k];
+                            const jointKey = `${j}_${k}`;
+                            
+                            if (placedJoint.type === priorityJointType && !takenJoints.has(jointKey)) {
+                                console.log(`    Found available ${priorityJointType} joint on ${placedPart.name}`);
+                                const attachX = placedPart.x + placedJoint.x * 5 - newPart.joints[0].x * 5;
+                                const attachY = placedPart.y + placedJoint.y * 5 - newPart.joints[0].y * 5;
+                                
+                                newPart.x = attachX;
+                                newPart.y = attachY;
+                                takenJoints.add(jointKey);
+                                jointPartTypes[jointKey] = normalizedNewName;
+                                console.log(`    Attached ${newPart.name} to ${priorityJointType} joint`);
+                                attached = true;
+                                break;
+                            }
+                        }
+                        if (attached) break;
+                    }
+                }
+            }
+            
+            // Redraw all parts
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            placedParts.forEach(part => {
+                ctx.drawImage(part.image, part.x, part.y, part.image.width * 5, part.image.height * 5);
+                part.joints.forEach(joint => {
+                    const canvasX = part.x + joint.x * 5;
+                    const canvasY = part.y + joint.y * 5;
+                    ctx.fillStyle = joint.type === 'leg' ? 'red' : joint.type === 'wing' ? 'blue' : joint.type === 'neck' ? 'green' : 'yellow';
+                    ctx.beginPath();
+                    ctx.arc(canvasX, canvasY, 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+            });
+        }
+
+        loadAzurileParts();
+    </script>
+</body>
+</html>

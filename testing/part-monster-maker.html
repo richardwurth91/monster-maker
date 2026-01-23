@@ -147,7 +147,7 @@
             <div style="display: flex; height: calc(100vh - 200px); gap: 20px;">
                 <!-- Left side: Canvas only - 50% -->
                 <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                    <canvas id="workspace" width="640" height="640" style="border: 4px solid #2f4f2f; background: #e6f3e6; cursor: crosshair; width: 100%; height: auto; max-width: 100%; aspect-ratio: 1;"></canvas>
+                    <div id="phaser-workspace" style="border: 4px solid #2f4f2f; width: 90%; height: 90%; max-width: 100%; aspect-ratio: 1;"></div>
                 </div>
                 
                 <!-- Right side: Split into two columns -->
@@ -243,7 +243,8 @@
             <div style="margin: 10px 0; font-size: 18px; font-weight: bold; color: #28a745;">
                 Creation Value: <span id="creation-value">0</span> Gold
             </div>
-            <input type="text" id="monster-name" placeholder="Monster name..." style="width: 100%; padding: 10px; margin: 20px 0; font-size: 16px; color: white; background: #333; border: 1px solid #666;">
+            <input type="text" id="monster-name" placeholder="Monster name..." maxlength="21" style="width: 100%; padding: 10px; margin: 20px 0; font-size: 16px; color: white; background: #333; border: 1px solid #666;" oninput="updateCharacterCount()">
+            <div id="char-count" style="text-align: right; font-size: 12px; color: #999; margin-top: -15px; margin-bottom: 15px;">0/21</div>
             <div class="modal-buttons">
                 <button class="rpgui-button" onclick="saveCreation()"><p>Save Monster</p></button>
                 <button class="rpgui-button" onclick="exportCanvas()"><p>Export</p></button>
@@ -251,8 +252,22 @@
         </div>
     </div>
 
-    <script src="part-maker-script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.js"></script>
+    <script src="/utils/ImageLoader.js"></script>
+    <script src="/utils/PartSprite.js"></script>
+    <script src="/utils/TransformManager.js"></script>
+    <script src="/utils/LayerManager.js"></script>
+    <script src="/utils/ExportManager.js"></script>
+    <script src="part-maker-phaser.js"></script>
     <script>
+        function updateCharacterCount() {
+            const input = document.getElementById('monster-name');
+            const counter = document.getElementById('char-count');
+            const current = input.value.length;
+            counter.textContent = `${current}/21`;
+            counter.style.color = current > 18 ? '#ff6b6b' : '#999';
+        }
+        
         // Auto-crop the chest image
         function autoCropImage(imageData) {
             const canvas = document.createElement('canvas');
@@ -340,17 +355,17 @@
         ];
         
         // Auto-start tutorial on first visit
-        window.addEventListener('load', () => {
-            console.log('Page loaded, checking tutorial flag');
-            const tutorialCompleted = localStorage.getItem('partMonsterMakerTutorialCompleted');
-            console.log('Tutorial completed flag:', tutorialCompleted);
-            if (!tutorialCompleted) {
-                console.log('Starting part-monster-maker tutorial');
-                setTimeout(startTutorial, 1000);
-            } else {
-                console.log('Tutorial already completed, skipping');
-            }
-        });
+        // window.addEventListener('load', () => {
+        //     console.log('Page loaded, checking tutorial flag');
+        //     const tutorialCompleted = localStorage.getItem('partMonsterMakerTutorialCompleted');
+        //     console.log('Tutorial completed flag:', tutorialCompleted);
+        //     if (!tutorialCompleted) {
+        //         console.log('Starting part-monster-maker tutorial');
+        //         setTimeout(startTutorial, 1000);
+        //     } else {
+        //         console.log('Tutorial already completed, skipping');
+        //     }
+        // });
         
         function startTutorial() {
             console.log('startTutorial called');
@@ -441,6 +456,7 @@
                 
                 // Position old man on same side as modal relative to target
                 const isModalRight = left > targetCenterX;
+                let oldManX, oldManY;
                 
                 if (isModalRight) {
                     oldManX = Math.min(window.innerWidth - 100, targetCenterX + rect.width / 2 + 50);
@@ -478,5 +494,6 @@
             modal.style.left = left + 'px';
             modal.style.top = top + 'px';
         }
+    </script>
 </body>
 </html>

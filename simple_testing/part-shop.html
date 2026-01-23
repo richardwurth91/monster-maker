@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monster Part Shop</title>
+    <link rel="stylesheet" href="/RPGUI/rpgui.css">
+    <script src="/RPGUI/rpgui.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script src="utils/PartPreviewScene.js"></script>
+    <style>
+        body { background: #2a4d3a; }
+        .rpgui-container {
+            max-width: 75vw;
+            margin: 0 auto;
+            padding: 20px;
+            max-height: 95vh;
+        }
+        .container .rpgui-container {
+            margin: 0 auto;
+        }
+        .sample-grid {
+            display: ruby;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .sample-item {
+            padding: 8px;
+            text-align: center;
+            position: relative;
+        }
+        .info-icon {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .shop-item {
+            width: 200px;
+            border: none !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 10px;
+        }
+        .container {
+            position: relative;
+            overflow: hidden;
+            min-height: 600px;
+            height: 95vh;
+        }
+        .inventory-area {
+            position: absolute;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 95vh;
+            padding: 20px;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+        }
+        .container.open .inventory-area {
+            right: 0;
+        }
+        .inventory-toggle {
+            position: absolute;
+            top: 20px;
+            right: -125px;
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            z-index: 15;
+            width: 80px !important;
+            height: 40px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-image-width: 12px;
+            font-size: 12px;
+            transition: right 0.3s ease;
+        }
+        .container.open .inventory-toggle {
+            right: 360px;
+        }
+        .show-buttons .inventory-toggle {
+            right: 0;
+        }
+        .show-buttons .monsters-toggle {
+            right: 0;
+        }
+        .inventory-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 2px solid #306230;
+            margin-bottom: 8px;
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #0f380f;
+        }
+        .inventory-item:hover {
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.4);
+        }
+        .part-icon {
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+            object-fit: contain;
+        }
+        .rarity-common { background: #6c757d; border-left: 4px solid #495057; color: #f0f0f0; }
+        .rarity-uncommon { background: #2d5016; color: #7fb069; border-left: 4px solid #7fb069; }
+        .rarity-rare { background: #1a237e; color: #64b5f6; border-left: 4px solid #64b5f6; }
+        .rarity-epic { background: #4a148c; color: #ba68c8; border-left: 4px solid #ba68c8; }
+        .rarity-legendary { background: #d4af37; color: #0f1f0f; border-left: 4px solid #f4d03f; }
+        .rarity-mythic { background: #b71c1c; color: #ffcdd2; border-left: 4px solid #ffcdd2; }
+        .part-preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 56, 15, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .part-preview-image {
+            width: 200px;
+            height: 200px;
+            image-rendering: pixelated;
+            object-fit: contain;
+            margin: 15px 0;
+        }
+        .monsters-area {
+            position: absolute;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 95vh;
+            padding: 20px;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+        }
+        .container.monsters-open .monsters-area {
+            right: 0;
+        }
+        .monsters-toggle {
+            position: absolute;
+            top: 80px;
+            right: -125px;
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            z-index: 15;
+            width: 80px !important;
+            height: 40px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-image-width: 12px;
+            font-size: 12px;
+            transition: right 0.3s ease;
+        }
+        .container.monsters-open .monsters-toggle {
+            right: 460px;
+        }
+        .container.open .monsters-toggle {
+            right: 360px;
+        }
+        .requests-area {
+            position: absolute;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 95vh;
+            padding: 20px;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .container.requests-open .requests-area {
+            overflow-y: hidden;
+        }
+        .container.requests-open #requests-section {
+            flex-direction: column;
+            gap: 5px;
+            font-size: 12px;
+            overflow-y: scroll;
+        }
+        .container.requests-open #requests-section > div {
+            flex: 1;
+            min-height: 0;
+            padding: 8px 60px 8px 8px !important;
+        }
+        .container.requests-open #requests-section p {
+            font-size: 11px;
+            font-weight: normal;
+            margin: 3px 0;
+        }
+        .container.requests-open .requests-area {
+            right: 0;
+        }
+        .requests-toggle {
+            position: absolute;
+            top: 140px;
+            right: -125px;
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            z-index: 15;
+            width: 80px !important;
+            height: 40px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-image-width: 12px;
+            font-size: 12px;
+            transition: right 0.3s ease;
+        }
+        .container.requests-open .requests-toggle {
+            right: 460px;
+        }
+        .show-buttons .requests-toggle {
+            right: 0;
+        }
+        .container.open .requests-toggle {
+            right: 360px;
+        }
+        .container.monsters-open .requests-toggle {
+            right: 460px;
+        }
+        .container.requests-open .inventory-toggle {
+            right: 460px;
+        }
+        .container.requests-open .monsters-toggle {
+            right: 460px;
+        }
+
+        .inventory-empty {
+            color: #0f380f;
+            font-style: italic;
+            text-align: center;
+            padding: 30px 15px;
+            background: #306230;
+            color: #9bbc0f;
+            border: 2px solid #0f380f;
+            font-family: 'Courier New', monospace;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border: 2px solid #0f380f;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            z-index: 3000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .alchemy-container button {
+            transition: transform 0.2s ease;
+        }
+        .alchemy-container img {
+            transition: transform 0.2s ease;
+        }
+        .alchemy-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .alchemy-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .maker-container button,
+        .maker-container img {
+            transition: transform 0.2s ease;
+        }
+        .maker-container button:hover {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .maker-container button:hover ~ img {
+            filter: drop-shadow(0 0 3px white) drop-shadow(0 0 3px white);
+            transform: scale(1.05);
+        }
+        .bottom-left-buttons {
+            image-rendering: pixelated;
+            position: fixed;
+            bottom: 20px;
+            left: -270px;
+            display: flex;
+            flex-direction: column;
+            gap: 120px;
+            z-index: 1000;
+            font-family: 'Press Start 2P';
+            color: white;
+            text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+            line-height: 22px;
+            transition: left 0.3s ease, transform 0.3s ease;
+            align-items: flex-end;
+            transform: translateX(0);
+        }
+        .show-left-buttons .bottom-left-buttons {
+            left: 20px;
+            align-items: center;
+            transform: translateX(50px);
+        }
+        .bottom-right-buttons .rpgui-button {
+            font-family: 'Press Start 2P';
+        }
+        .bottom-right-buttons .rpgui-button p {
+            color: white;
+            text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+            line-height: 22px;
+        }
+        #combining-modal {
+            display: none;
+            position: fixed;
+            z-index: 2500;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            pointer-events: none;
+        }
+        #combining-modal.active {
+            pointer-events: auto;
+        }
+        #combining-content {
+            text-align: center;
+            pointer-events: auto;
+        }
+        .combining-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        #progress-container {
+            width: 100%;
+            height: 30px;
+            background: #333;
+            border: 3px solid #8b4513;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.1s linear;
+        }
+        #timer-text {
+            color: white;
+            font-size: 18px;
+            margin-top: 10px;
+            font-family: 'Press Start 2P', cursive;
+        }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content">
+        <div class="container">
+            <div class="rpgui-container framed" style="position: relative;">
+                <h1>Monster Part Shop</h1>
+                <hr>
+                <p>GOLD: <span id="goldAmount">100</span>G</p>
+                
+                <div class="sample-grid">
+                    <div class="rpgui-container shop-item framed-grey sample-item" style="background-image: url('/assets/icons/misc/other/Head_1.png'); background-size: 150px 150px; background-repeat: no-repeat; background-position: center; border: none !important;">
+                        <div class="info-icon" onclick="showPartPool('head')">i</div>
+                        <p style="margin-bottom: 80px;">HEAD PARTS<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPartByType('head')"><p>BUY</p></button>
+                    </div>
+                    <div class="rpgui-container shop-item framed-grey sample-item" style="background-image: url('/assets/icons/misc/other/Body_1.png'); background-size: 150px 150px; background-repeat: no-repeat; background-position: center; border: none !important;">
+                        <div class="info-icon" onclick="showPartPool('body')">i</div>
+                        <p style="margin-bottom: 80px;">BODY PARTS<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPartByType('body')"><p>BUY</p></button>
+                    </div>
+                    <div class="rpgui-container shop-item framed-grey sample-item" style="background-image: url('/assets/icons/misc/other/Hand_1.png'); background-size: 150px 150px; background-repeat: no-repeat; background-position: center; border: none !important;">
+                        <div class="info-icon" onclick="showPartPool('arm')">i</div>
+                        <p style="margin-bottom: 80px;">ARM PARTS<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPartByType('arm')"><p>BUY</p></button>
+                    </div>
+                    <div class="rpgui-container shop-item framed-grey sample-item" style="background-image: url('/assets/icons/misc/other/Foot_1.png'); background-size: 150px 150px; background-repeat: no-repeat; background-position: center; border: none !important;">
+                        <div class="info-icon" onclick="showPartPool('leg')">i</div>
+                        <p style="margin-bottom: 80px;">LEG PARTS<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPartByType('leg')"><p>BUY</p></button>
+                    </div>
+                    <div class="rpgui-container shop-item framed-grey sample-item" style="background-image: url('/assets/icons/misc/other/Wing_1.png'); background-size: 150px 150px; background-repeat: no-repeat; background-position: center; border: none !important;">
+                        <div class="info-icon" onclick="showPartPool('wing')">i</div>
+                        <p style="margin-bottom: 80px;">WING PARTS<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPartByType('wing')"><p>BUY</p></button>
+                    </div>
+                    <div class="rpgui-container shop-item framed-grey sample-item" style="border: none !important;">
+                        <div class="info-icon" onclick="showPartPool('tail')">i</div>
+                        <p style="margin-bottom: 80px;">TAIL PARTS<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPartByType('tail')"><p>BUY</p></button>
+                    </div>
+                    <div class="rpgui-container shop-item framed-grey sample-item" style="background-image: url('/assets/icons/misc/other/Sword_1.png'); background-size: 150px 150px; background-repeat: no-repeat; background-position: center; border: none !important;">
+                        <div class="info-icon" onclick="showPartPool('weapon')">i</div>
+                        <p style="margin-bottom: 80px;">WEAPON PARTS<br>10G</p>
+                        <button class="rpgui-button" onclick="buyPartByType('weapon')"><p>BUY</p></button>
+                    </div>
+                </div>
+                
+                <hr>
+                <button class="rpgui-button" onclick="resetProgress()"><p>RESET</p></button>
+            </div>
+            
+            <div class="monsters-area rpgui-container framed">
+                <h2>Your Monsters</h2>
+                <div id="monsters-section"></div>
+            </div>
+            <button class="rpgui-button monsters-toggle" onclick="toggleMonsters()"><p id="monsters-toggle-text">Monsters</p></button>
+            
+            <div class="inventory-area rpgui-container framed">
+                <h2>Part Inventory</h2>
+                <div id="inventory"></div>
+            </div>
+            <button class="rpgui-button inventory-toggle" onclick="toggleInventory()"><p id="toggle-text">Inventory</p></button>
+            
+            <div class="requests-area rpgui-container framed">
+                <h2>Requests</h2>
+                <div id="requests-section">
+                    <p>Loading requests...</p>
+                </div>
+            </div>
+            <button class="rpgui-button requests-toggle" onclick="toggleRequests()"><p id="requests-toggle-text">Requests</p></button>
+        </div>
+    </div>
+
+    <!-- Hidden Phaser container -->
+    <div id="phaser-container" style="display: none;"></div>
+
+    <!-- Combining Modal -->
+    <div id="combining-modal">
+        <div class="rpgui-content">
+            <div id="combining-content" class="rpgui-container framed">
+                <h3 style="color: white; font-size: 14px;">Combining...</h3>
+                <img src="/assets/icons/misc/alchemy_pot/alchemy_pot_animation.gif" style="width: 100px; height: 100px; image-rendering: pixelated; margin: 10px 0;" alt="Alchemy Pot">
+                <div id="progress-container">
+                    <div id="progress-bar"></div>
+                </div>
+                <div id="timer-text">30s</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Right Buttons -->
+    <div class="bottom-left-buttons">
+        <div style="position: relative; display: inline-block;" class="maker-container">
+            <button class="rpgui-button" onclick="window.location.href='part-monster-maker.html'" style="position: relative; z-index: 2;"><p>ALTAR OF CREATION</p></button>
+            <img src="/assets/icons/misc/other/Starry Shrine Altar.png" style="position: absolute; width: 150px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="alchemy-container">
+            <button class="rpgui-button" onclick="window.location.href='part-combiner.html'" style="position: relative; z-index: 2;"><p>ALCHEMY POT</p></button>
+            <img src="/assets/icons/misc/alchemy_pot/Alchemy pot_1.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+        <div style="position: relative; display: inline-block;" class="alchemy-container">
+            <button class="rpgui-button" onclick="window.location.href='compendium.html'" style="position: relative; z-index: 2;"><p>COMPENDIUM</p></button>
+            <img src="/assets/icons/misc/other/library.png" style="position: absolute; width: 100px; height: 100px; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); padding-bottom: 120px; image-rendering: pixelated;">
+        </div>
+    </div>
+
+    <!-- Part Preview Modal -->
+    <div id="part-preview-modal" class="part-preview-modal" onclick="closePartPreview()">
+        <div class="rpgui-content">
+            <div class="rpgui-container framed" onclick="event.stopPropagation()" style="max-width: 400px; text-align: center; margin: 0 auto; position: relative;">
+                <h1 id="preview-part-name">Part Name</h1>
+                <img id="preview-part-image" class="part-preview-image" src="" alt="Part Preview">
+                <p><strong>From:</strong> <span id="preview-part-monster">Monster Name</span></p>
+                <p><strong>Rarity:</strong> <span id="preview-part-rarity">Common</span></p>
+                <button class="rpgui-button" onclick="closePartPreview()"><p>Close</p></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monster Preview Modal -->
+    <div id="monster-preview-modal" class="part-preview-modal" onclick="closeMonsterPreview()">
+        <div class="rpgui-content">
+            <div class="rpgui-container framed" onclick="event.stopPropagation()" style="max-width: 400px; text-align: center; margin: 0 auto; position: relative;">
+                <h1 id="preview-monster-name">Monster Name</h1>
+                <img id="preview-monster-image" class="part-preview-image" src="" alt="Monster Preview">
+                <p><strong>Base Value:</strong> <span id="preview-monster-value">0</span>G</p>
+                <p><strong>Parts Used:</strong></p>
+                <div id="preview-monster-parts" style="font-size: 12px; text-align: left; margin: 10px 0; max-height: 150px; overflow-y: auto;"></div>
+                <button class="rpgui-button" onclick="sellMonsterFromPreview()"><p>SELL</p></button>
+                <button class="rpgui-button" onclick="closeMonsterPreview()"><p>Close</p></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Part Pool Modal -->
+    <div id="part-pool-modal" class="part-preview-modal" onclick="closePartPool()">
+        <div class="rpgui-content">
+            <div class="rpgui-container framed" onclick="event.stopPropagation()" style="max-width: 600px; text-align: center; margin: 0 auto; position: relative;">
+                <h1 id="pool-title">Part Pool</h1>
+                <p id="pool-description">Available parts for this category</p>
+                <div id="pool-parts" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; margin: 20px 0;"></div>
+                <button class="rpgui-button" onclick="closePartPool()"><p>Close</p></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gold = parseInt(localStorage.getItem('gold')) ?? 100;
+        const partPrice = 10;
+        let parts = [];
+        let inventory = JSON.parse(localStorage.getItem('partInventory')) || [];
+        
+        // Phaser setup for part rendering
+        let phaserGame;
+        let partPreviewScene;
+        
+        function initPhaser() {
+            const config = {
+                type: Phaser.AUTO,
+                width: 200,
+                height: 200,
+                parent: 'phaser-container',
+                backgroundColor: 'transparent',
+                pixelArt: true,
+                scene: PartPreviewScene
+            };
+            
+            phaserGame = new Phaser.Game(config);
+            partPreviewScene = phaserGame.scene.getScene('PartPreviewScene');
+        }
+
+        async function loadParts() {
+            try {
+                const response = await fetch('/api/simple_parts');
+                const simpleParts = await response.json();
+                
+                // Load discovered monsters from localStorage
+                const discoveredMonsters = JSON.parse(localStorage.getItem('discoveredMonsters')) || [];
+                
+                parts = [];
+                for (const part of simpleParts) {
+                    // Get monster info to check rarity
+                    const monsterResponse = await fetch(`/api/monsters/${part.monster_id}`);
+                    const monster = await monsterResponse.json();
+                    
+                    if (monster) {
+                        // Check if monster should be available in shop
+                        const rarityOrder = { 'common': 1, 'uncommon': 2, 'rare': 3, 'epic': 4, 'legendary': 5, 'mythic': 6 };
+                        const rarityLevel = rarityOrder[monster.rarity] || 1;
+                        
+                        // Only include parts from common monsters or discovered uncommon+ monsters
+                        if (rarityLevel < 2 || discoveredMonsters.includes(monster.name)) {
+                            parts.push({
+                                name: part.name,
+                                monster: monster.name,
+                                family: part.family,
+                                rarity: monster.rarity || 1,
+                                sprite: part.sprite,
+                                type: part.type
+                            });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load parts:', error);
+                parts = [];
+            }
+        }
+
+        function autoCropImage(imageData) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const pixels = data.data;
+                    
+                    let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                    
+                    for (let y = 0; y < canvas.height; y++) {
+                        for (let x = 0; x < canvas.width; x++) {
+                            const alpha = pixels[(y * canvas.width + x) * 4 + 3];
+                            if (alpha > 0) {
+                                minX = Math.min(minX, x);
+                                minY = Math.min(minY, y);
+                                maxX = Math.max(maxX, x);
+                                maxY = Math.max(maxY, y);
+                            }
+                        }
+                    }
+                    
+                    if (minX < canvas.width) {
+                        const cropWidth = maxX - minX + 1;
+                        const cropHeight = maxY - minY + 1;
+                        
+                        const cropCanvas = document.createElement('canvas');
+                        const cropCtx = cropCanvas.getContext('2d');
+                        cropCanvas.width = cropWidth;
+                        cropCanvas.height = cropHeight;
+                        
+                        cropCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+                        resolve(cropCanvas.toDataURL());
+                    } else {
+                        resolve(imageData);
+                    }
+                };
+                img.src = imageData;
+            });
+        }
+
+        function getRarity(rarity) {
+            if (rarity === 'mythic') return { name: 'Mythic', class: 'rarity-mythic' };
+            if (rarity === 'legendary') return { name: 'Legendary', class: 'rarity-legendary' };
+            if (rarity === 'epic') return { name: 'Epic', class: 'rarity-epic' };
+            if (rarity === 'rare') return { name: 'Rare', class: 'rarity-rare' };
+            if (rarity === 'uncommon') return { name: 'Uncommon', class: 'rarity-uncommon' };
+            return { name: 'Common', class: 'rarity-common' };
+        }
+
+        async function updateInventory() {
+            const inventoryDiv = document.getElementById('inventory');
+            if (inventory.length === 0) {
+                inventoryDiv.innerHTML = '<div class="inventory-empty">No parts yet<br><small>Buy some parts to get started!</small></div>';
+                return;
+            }
+            
+            // Group parts by type
+            const partsByType = {};
+            inventory.forEach((part, index) => {
+                const type = part.type || 'other';
+                const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
+                           
+                if (!partsByType[capitalizedType]) partsByType[capitalizedType] = [];
+                partsByType[capitalizedType].push({...part, index});
+            });
+            
+            let inventoryHtml = '';
+            
+            for (const [type, parts] of Object.entries(partsByType).sort()) {
+                inventoryHtml += `
+                    <div style="margin-bottom: 10px;">
+                        <div onclick="toggleCategory('${type}')" style="cursor: pointer; padding: 8px; background: #4a5c4a; color: white; font-weight: bold; border: 1px solid #666;">
+                            <span id="arrow-${type}">▶</span> ${type} (${parts.length})
+                        </div>
+                        <div id="category-${type}" style="display: none;">
+                `;
+                
+                const categoryItems = await Promise.all(
+                    parts.map(async (part) => {
+                        const rarityInfo = getRarity(part.rarity);
+                        let partIconHtml = '';
+                        
+                        // Use Phaser for rendering if available, fallback to canvas
+                        if (partPreviewScene && partPreviewScene.scene.isActive()) {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 32;
+                            canvas.height = 32;
+                            canvas.className = 'part-icon';
+                            canvas.style.cssText = 'width: 32px; height: 32px; image-rendering: pixelated;';
+                            
+                            const croppedSprite = await autoCropImage(part.sprite);
+                            partPreviewScene.renderPartToCanvas(croppedSprite, canvas, 32, 32);
+                            partIconHtml = canvas.outerHTML;
+                        } else {
+                            // Fallback to original method
+                            const croppedSprite = await autoCropImage(part.sprite);
+                            partIconHtml = `<img src="${croppedSprite}" class="part-icon" alt="${part.name}">`;
+                        }
+                        
+                        return `<div class="inventory-item ${rarityInfo.class}" onclick="showPartPreview(${part.index})">
+                            ${partIconHtml}
+                            <div>
+                                <div style="font-weight: 600;">${part.name}</div>
+                                <div style="font-size: 12px;">from ${part.monster}</div>
+                                <div style="font-size: 12px; font-weight: 600;">${rarityInfo.name}</div>
+                            </div>
+                        </div>`;
+                    })
+                );
+                
+                inventoryHtml += categoryItems.join('') + '</div></div>';
+            }
+            
+            inventoryDiv.innerHTML = inventoryHtml;
+        }
+        
+        function toggleCategory(type) {
+            const category = document.getElementById(`category-${type}`);
+            const arrow = document.getElementById(`arrow-${type}`);
+            
+            if (category.style.display === 'none') {
+                category.style.display = 'block';
+                arrow.textContent = '▼';
+            } else {
+                category.style.display = 'none';
+                arrow.textContent = '▶';
+            }
+        }
+
+        function updateGold() {
+            document.getElementById('goldAmount').textContent = gold;
+            localStorage.setItem('gold', gold);
+        }
+
+        function showToast(message, rarity = null) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = message; // Use innerHTML instead of textContent to support HTML
+            
+            if (rarity) {
+                const rarityInfo = getRarity(rarity);
+                toast.classList.add(rarityInfo.class);
+            } else {
+                toast.style.background = '#306230';
+                toast.style.color = '#9bbc0f';
+            }
+            
+            const existingToasts = document.querySelectorAll('.toast');
+            existingToasts.forEach((t, i) => {
+                t.style.top = `${20 + (i + 1) * 60}px`;
+            });
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) document.body.removeChild(toast);
+                    const remainingToasts = document.querySelectorAll('.toast');
+                    remainingToasts.forEach((t, i) => {
+                        t.style.top = `${20 + i * 60}px`;
+                    });
+                }, 300);
+            }, 3000);
+        }
+
+        function getRarityByChance() {
+            const rand = Math.random() * 100;
+            if (rand < 1) return 4; // Mythic - 1%
+            if (rand < 6) return 3; // Legendary - 5%
+            if (rand < 16) return 2.5; // Epic - 10%
+            if (rand < 33) return 2; // Rare - 17%
+            if (rand < 60) return 1.5; // Uncommon - 27%
+            return 1; // Common - 40%
+        }
+
+        function buyPartByType(targetType) {
+            if (gold < partPrice || parts.length === 0) {
+                showToast('Not enough gold!');
+                return;
+            }
+            
+            gold -= partPrice;
+            
+            const targetRarity = getRarityByChance();
+            const categoryParts = parts.filter(part => part.type === targetType);
+            
+            const eligibleParts = categoryParts.filter(part => {
+                const partRarity = parseFloat(part.rarity) || 1;
+                return Math.abs(partRarity - targetRarity) < 0.5;
+            });
+            
+            const availableParts = eligibleParts.length > 0 ? eligibleParts : categoryParts;
+            
+            if (availableParts.length === 0) {
+                showToast(`No ${targetType} parts available!`);
+                gold += partPrice;
+                updateGold();
+                return;
+            }
+            
+            const randomPart = availableParts[Math.floor(Math.random() * availableParts.length)];
+            
+            inventory.push(randomPart);
+            
+            let discoveredParts = JSON.parse(localStorage.getItem('discoveredParts')) || [];
+            const partKey = `${randomPart.monster}_${randomPart.name}`;
+            const isNewPart = !discoveredParts.includes(partKey);
+            if (isNewPart) {
+                discoveredParts.push(partKey);
+                localStorage.setItem('discoveredParts', JSON.stringify(discoveredParts));
+            }
+            
+            localStorage.setItem('partInventory', JSON.stringify(inventory));
+            
+            const message = `You got: ${randomPart.name} from ${randomPart.monster}!${isNewPart ? ' <span style="color: red; font-weight: bold;">NEW!</span>' : ''}`;
+            showToast(message, randomPart.rarity);
+            
+            updateGold();
+            updateInventory();
+        }
+
+        function buyPart(partNum) {
+            if (gold < partPrice || parts.length === 0) {
+                showToast('Not enough gold!');
+                return;
+            }
+            
+            gold -= partPrice;
+            
+            // Get rarity based on chances
+            const targetRarity = getRarityByChance();
+            
+            // Filter parts by category and rarity
+            let categoryParts;
+            if (partNum === 1) {
+                // Body parts: legs, wings, arms, heads, torsos
+                categoryParts = parts.filter(part => {
+                    const name = part.name.toLowerCase();
+                    return name.includes('leg') || name.includes('wing') || name.includes('arm') || 
+                           name.includes('head') || name.includes('torso') || name.includes('body');
+                });
+            } else if (partNum === 2) {
+                // Features & weapons: eyes, ears, nose, weapons
+                categoryParts = parts.filter(part => {
+                    const name = part.name.toLowerCase();
+                    return name.includes('eye') || name.includes('ear') || name.includes('nose') || 
+                           name.includes('sword') || name.includes('weapon') || name.includes('axe') || 
+                           name.includes('spear') || name.includes('bow') || name.includes('staff');
+                });
+            } else {
+                // Special parts: everything else
+                categoryParts = parts.filter(part => {
+                    const name = part.name.toLowerCase();
+                    const isBodyPart = name.includes('leg') || name.includes('wing') || name.includes('arm') || 
+                                      name.includes('head') || name.includes('torso') || name.includes('body');
+                    const isFeature = name.includes('eye') || name.includes('ear') || name.includes('nose') || 
+                                     name.includes('sword') || name.includes('weapon') || name.includes('axe') || 
+                                     name.includes('spear') || name.includes('bow') || name.includes('staff');
+                    return !isBodyPart && !isFeature;
+                });
+            }
+            
+            // Filter by rarity within category
+            const eligibleParts = categoryParts.filter(part => {
+                const partRarity = parseFloat(part.rarity) || 1;
+                return Math.abs(partRarity - targetRarity) < 0.5;
+            });
+            
+            // If no parts match exact rarity, fall back to category parts
+            const availableParts = eligibleParts.length > 0 ? eligibleParts : categoryParts;
+            
+            if (availableParts.length === 0) {
+                showToast('No parts available in this category!');
+                gold += partPrice; // Refund
+                updateGold();
+                return;
+            }
+            
+            const randomPart = availableParts[Math.floor(Math.random() * availableParts.length)];
+            
+            inventory.push(randomPart);
+            
+            // Track discovered parts (all parts, regardless of rarity)
+            let discoveredParts = JSON.parse(localStorage.getItem('discoveredParts')) || [];
+            const partKey = `${randomPart.monster}_${randomPart.name}`;
+            const isNewPart = !discoveredParts.includes(partKey);
+            if (isNewPart) {
+                discoveredParts.push(partKey);
+                localStorage.setItem('discoveredParts', JSON.stringify(discoveredParts));
+            }
+            
+            localStorage.setItem('partInventory', JSON.stringify(inventory));
+            
+            const message = `You got: ${randomPart.name} from ${randomPart.monster}!${isNewPart ? ' <span style="color: red; font-weight: bold;">NEW!</span>' : ''}`;
+            showToast(message, randomPart.rarity);
+            
+            updateGold();
+            updateInventory();
+        }
+
+        function toggleMonsters() {
+            const container = document.querySelector('.container');
+            if (container.classList.contains('open')) {
+                container.classList.remove('open');
+            }
+            if (container.classList.contains('requests-open')) {
+                container.classList.remove('requests-open');
+            }
+            container.classList.toggle('monsters-open');
+        }
+
+        function toggleInventory() {
+            const container = document.querySelector('.container');
+            if (container.classList.contains('monsters-open')) {
+                container.classList.remove('monsters-open');
+            }
+            if (container.classList.contains('requests-open')) {
+                container.classList.remove('requests-open');
+            }
+            container.classList.toggle('open');
+        }
+
+        function toggleRequests() {
+            const container = document.querySelector('.container');
+            if (container.classList.contains('open')) {
+                container.classList.remove('open');
+            }
+            if (container.classList.contains('monsters-open')) {
+                container.classList.remove('monsters-open');
+            }
+            container.classList.toggle('requests-open');
+        }
+
+        function resetProgress() {
+            if (confirm('Reset all progress?')) {
+                localStorage.removeItem('gold');
+                localStorage.removeItem('partInventory');
+                localStorage.removeItem('activeRequests');
+                localStorage.removeItem('discoveredMonsters');
+                localStorage.removeItem('discoveredParts');
+                localStorage.removeItem('requestTimers');
+                localStorage.removeItem('rerollCosts');
+                localStorage.removeItem('fulfilledRequests');
+                localStorage.removeItem('unlockedSlots');
+                localStorage.removeItem('partCombinerTutorialCompleted');
+                localStorage.removeItem('partMonsterMakerTutorialCompleted');
+                localStorage.removeItem('reverseLookupUnlocked');
+                localStorage.removeItem('workspaceState'); // Clear workspace state too
+                gold = 100;
+                inventory = [];
+                requestTimers = {};
+                rerollCosts = { daily_0: 0, daily_1: 0, daily_2: 0, weekly: 0 };
+                fulfilledRequests = {};
+                reverseLookupUnlocked = false;
+                initializeTimers();
+                updateGold();
+                updateInventory();
+                updateRequests();
+                updateReverseLookupDisplay();
+                document.getElementById('requests-section').innerHTML = '<p>No active requests</p>';
+                alert('Progress reset!');
+            }
+        }
+
+        async function showPartPreview(partIndex) {
+            const part = inventory[partIndex];
+            const rarityInfo = getRarity(part.rarity);
+            
+            let previewImageSrc;
+            // Use Phaser for rendering if available, fallback to canvas
+            if (partPreviewScene && partPreviewScene.scene.isActive()) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+                
+                const croppedSprite = await autoCropImage(part.sprite);
+                partPreviewScene.renderPartToCanvas(croppedSprite, canvas, 200, 200);
+                previewImageSrc = canvas.toDataURL();
+            } else {
+                // Fallback to original method
+                previewImageSrc = await autoCropImage(part.sprite);
+            }
+            
+            document.getElementById('preview-part-name').textContent = part.name;
+            document.getElementById('preview-part-image').src = previewImageSrc;
+            document.getElementById('preview-part-monster').textContent = part.monster;
+            document.getElementById('preview-part-rarity').textContent = rarityInfo.name;
+            document.getElementById('part-preview-modal').style.display = 'flex';
+        }
+
+        function closePartPreview() {
+            document.getElementById('part-preview-modal').style.display = 'none';
+        }
+
+        async function loadCreatedMonsters() {
+            try {
+                const response = await fetch('/api/creations');
+                const creations = await response.json();
+                const userName = localStorage.getItem('userName') || 'Anonymous';
+                
+                const userMonsters = creations.filter(creation => creation.author === userName);
+                
+                const monstersDiv = document.getElementById('monsters-section');
+                if (userMonsters.length === 0) {
+                    monstersDiv.innerHTML = '<p>No monsters created yet</p>';
+                } else {
+                    const monsterElements = await Promise.all(
+                        userMonsters.map(async (monster, index) => {
+                            let monsterDisplay;
+                            if (monster.creation_data) {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = 64;
+                                canvas.height = 64;
+                                const ctx = canvas.getContext('2d');
+                                ctx.imageSmoothingEnabled = false;
+                                await renderCreationData(monster.creation_data, ctx, 64, 64);
+                                const dataURL = canvas.toDataURL();
+                                monsterDisplay = `<img src="${dataURL}" style="width: 64px; height: 64px; image-rendering: pixelated;">`;
+                            } else {
+                                const img = new Image();
+                                const scaledImage = await new Promise(resolve => {
+                                    img.onload = () => {
+                                        const canvas = document.createElement('canvas');
+                                        canvas.width = 64;
+                                        canvas.height = 64;
+                                        const ctx = canvas.getContext('2d');
+                                        ctx.imageSmoothingEnabled = false;
+                                        
+                                        // Scale image to fit in 64x64 while maintaining aspect ratio
+                                        let scale = Math.min(64 / img.width, 64 / img.height);
+                                        
+                                        // If image is very small, scale it up more
+                                        if (img.width < 32 || img.height < 32) {
+                                            scale = Math.min(64 / img.width, 64 / img.height);
+                                        }
+                                        
+                                        const scaledWidth = img.width * scale;
+                                        const scaledHeight = img.height * scale;
+                                        
+                                        // Center the scaled image
+                                        const offsetX = (64 - scaledWidth) / 2;
+                                        const offsetY = (64 - scaledHeight) / 2;
+                                        
+                                        ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+                                        resolve(canvas.toDataURL());
+                                    };
+                                    img.src = monster.sprite;
+                                });
+                                monsterDisplay = `<img src="${scaledImage}" style="width: 64px; height: 64px; image-rendering: pixelated;">`;
+                            }
+                            
+                            return `<div style="display: inline-block; margin: 5px; text-align: center; width: 120px; cursor: url('/RPGUI/img/cursor/point.png'), pointer;" onclick="showMonsterPreview(${index})">
+                                ${monsterDisplay}
+                                <p>${monster.name}</p>
+                            </div>`;
+                        })
+                    );
+                    monstersDiv.innerHTML = monsterElements.join('');
+                }
+            } catch (error) {
+                console.error('Error loading monsters:', error);
+            }
+        }
+
+        async function renderCreationData(creationDataStr, ctx, canvasWidth, canvasHeight) {
+            const data = JSON.parse(creationDataStr);
+            
+            if (!data.placedParts || data.placedParts.length === 0) {
+                return;
+            }
+            
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            
+            data.placedParts.forEach(part => {
+                minX = Math.min(minX, part.x);
+                minY = Math.min(minY, part.y);
+                maxX = Math.max(maxX, part.x + part.width);
+                maxY = Math.max(maxY, part.y + part.height);
+            });
+            
+            const contentWidth = maxX - minX;
+            const contentHeight = maxY - minY;
+            
+            // Scale to fit in canvas while maintaining aspect ratio
+            let scale = Math.min(canvasWidth / contentWidth, canvasHeight / contentHeight);
+            
+            // If content is very small, scale it up more
+            if (contentWidth < canvasWidth / 2 || contentHeight < canvasHeight / 2) {
+                scale = Math.min(canvasWidth / contentWidth, canvasHeight / contentHeight);
+            }
+            
+            const scaledWidth = contentWidth * scale;
+            const scaledHeight = contentHeight * scale;
+            
+            const offsetX = (canvasWidth - scaledWidth) / 2;
+            const offsetY = (canvasHeight - scaledHeight) / 2;
+            
+            // Sort parts by their original order (first part = top layer, last part = bottom layer)
+            const sortedParts = [...data.placedParts].sort((a, b) => {
+                // If parts have explicit layer/depth info, use that
+                if (a.layer !== undefined && b.layer !== undefined) {
+                    return b.layer - a.layer;
+                }
+                // Otherwise reverse array order (first = top, last = bottom)
+                return data.placedParts.indexOf(b) - data.placedParts.indexOf(a);
+            });
+            
+            for (const part of sortedParts) {
+                const img = new Image();
+                await new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                    img.src = part.dataUrl;
+                });
+                
+                ctx.save();
+                
+                const scaledX = (part.x - minX) * scale + offsetX;
+                const scaledY = (part.y - minY) * scale + offsetY;
+                const scaledPartWidth = part.width * scale;
+                const scaledPartHeight = part.height * scale;
+                
+                const centerX = scaledX + scaledPartWidth / 2;
+                const centerY = scaledY + scaledPartHeight / 2;
+                
+                ctx.translate(centerX, centerY);
+                
+                if (part.flipHorizontal || part.flipVertical) {
+                    ctx.scale(
+                        part.flipHorizontal ? -1 : 1,
+                        part.flipVertical ? -1 : 1
+                    );
+                }
+                
+                if (part.rotation) {
+                    ctx.rotate(part.rotation * Math.PI / 180);
+                }
+                
+                ctx.drawImage(img, -scaledPartWidth / 2, -scaledPartHeight / 2, scaledPartWidth, scaledPartHeight);
+                ctx.restore();
+            }
+        }
+        let currentPreviewMonster = null;
+        
+        async function showMonsterPreview(monsterIndex) {
+            const response = await fetch('/api/creations');
+            const creations = await response.json();
+            const userName = localStorage.getItem('userName') || 'Anonymous';
+            const userMonsters = creations.filter(creation => creation.author === userName);
+            const monster = userMonsters[monsterIndex];
+            currentPreviewMonster = monster;
+            
+            let monsterDisplay;
+            if (monster.creation_data) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                await renderCreationData(monster.creation_data, ctx, 200, 200);
+                const dataURL = canvas.toDataURL();
+                monsterDisplay = dataURL;
+            } else {
+                monsterDisplay = await autoCropImage(monster.sprite);
+            }
+            
+            // Calculate monster value and get parts info with bonuses
+            let baseValue = 0;
+            let partsInfo = [];
+            let bonusText = '';
+            
+            if (monster.creation_data) {
+                const data = JSON.parse(monster.creation_data);
+                if (data.placedParts) {
+                    // Calculate base value
+                    data.placedParts.forEach(part => {
+                        const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                        if (partData) {
+                            const rarityValues = { 'common': 1, 'uncommon': 1.5, 'rare': 2, 'epic': 2.5, 'legendary': 3, 'mythic': 4 };
+                            const rarityValue = rarityValues[partData.rarity] || 1;
+                            baseValue += Math.floor(rarityValue * 10);
+                        }
+                    });
+                    
+                    // Calculate same-monster bonuses
+                    const monsterCounts = {};
+                    data.placedParts.forEach(part => {
+                        const key = `${part.name}-${part.monster}`;
+                        if (!monsterCounts[part.monster]) monsterCounts[part.monster] = new Set();
+                        monsterCounts[part.monster].add(key);
+                    });
+                    
+                    let bonusMultiplier = 0;
+                    const bonuses = [];
+                    Object.entries(monsterCounts).forEach(([monsterName, uniqueParts]) => {
+                        const count = uniqueParts.size;
+                        if (count >= 2) {
+                            const bonus = 0.1 + (count - 2) * 0.2;
+                            bonusMultiplier += bonus;
+                            bonuses.push(`${monsterName}: +${Math.round(bonus * 100)}%`);
+                        }
+                    });
+                    
+                    if (bonuses.length > 0) {
+                        bonusText = `<div style="color: #90EE90; font-size: 11px; margin-top: 5px;">${bonuses.join(', ')}</div>`;
+                    }
+                    
+                    baseValue = Math.floor(baseValue * (1 + bonusMultiplier));
+                    
+                    const partCounts = {};
+                    data.placedParts.forEach(part => {
+                        const partKey = `${part.name} (${part.monster})`;
+                        partCounts[partKey] = (partCounts[partKey] || 0) + 1;
+                    });
+                    
+                    partsInfo = await Promise.all(
+                        Object.entries(partCounts).map(async ([partKey, count]) => {
+                            const [partName, monsterName] = partKey.split(' (');
+                            const cleanMonsterName = monsterName.replace(')', '');
+                            const partData = parts.find(p => p.name === partName && p.monster === cleanMonsterName);
+                            const rarityInfo = partData ? getRarity(partData.rarity) : { name: 'Common', class: 'rarity-common' };
+                            const croppedSprite = partData ? await autoCropImage(partData.sprite) : '';
+                            return `<div class="inventory-item ${rarityInfo.class}" style="height: 30px; padding: 5px; margin-bottom: 4px;">
+                                <img src="${croppedSprite}" class="part-icon" style="width: 20px; height: 20px;" alt="${partName}">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 11px;">${count}x ${partName}</div>
+                                    <div style="font-size: 10px;">from ${cleanMonsterName} - ${rarityInfo.name}</div>
+                                </div>
+                            </div>`;
+                        })
+                    );
+                }
+            }
+            
+            document.getElementById('preview-monster-name').textContent = monster.name;
+            document.getElementById('preview-monster-image').src = monsterDisplay;
+            document.getElementById('preview-monster-value').innerHTML = `${isNaN(baseValue) ? '0' : baseValue}${bonusText}`;
+            document.getElementById('preview-monster-parts').innerHTML = partsInfo.length > 0 ? partsInfo.join('') : 'No parts data available';
+            document.getElementById('monster-preview-modal').style.display = 'flex';
+        }
+
+        function canMakeRequestMonster(request) {
+            const anyPartsMatch = request.description.match(/Need any parts from (\w+) family monsters/);
+            if (anyPartsMatch) {
+                const family = anyPartsMatch[1];
+                return inventory.some(part => part.family && part.family.toLowerCase() === family.toLowerCase());
+            }
+            
+            const partsMatch = request.description.match(/Need (\d+)x (\w+) parts from (\w+) family monsters|Need (\d+)x (\w+) parts from any monster/);
+            if (!partsMatch) return false;
+            
+            const quantity = parseInt(partsMatch[1] || partsMatch[4]);
+            const partType = partsMatch[2] || partsMatch[5];
+            const family = partsMatch[3];
+            
+            let availableParts = 0;
+            inventory.forEach(part => {
+                const matchesPartType = part.name.toLowerCase().includes(partType.toLowerCase());
+                const matchesFamily = !family || (part.family && part.family.toLowerCase() === family.toLowerCase());
+                if (matchesPartType && matchesFamily) {
+                    availableParts++;
+                }
+            });
+            
+            return availableParts >= quantity;
+        }
+
+        function generateRandomRequest() {
+            const partTypes = ['head', 'body', 'arm', 'leg', 'wing', 'tail', 'weapon'];
+            const quantity = Math.floor(Math.random() * 3) + 1;
+            const partType = partTypes[Math.floor(Math.random() * partTypes.length)];
+            const reward = 1.0 + (quantity * 0.1);
+            
+            return {
+                description: `Need ${quantity}x ${partType} parts from any monster`,
+                reward: reward,
+                checkFunction: (monster) => {
+                    if (!monster.creation_data) return false;
+                    const data = JSON.parse(monster.creation_data);
+                    if (!data.placedParts) return false;
+                    return data.placedParts.filter(part => 
+                        part.name.toLowerCase().includes(partType.toLowerCase())
+                    ).length >= quantity;
+                }
+            };
+        }
+
+        function generateWeeklyRequest() {
+            const partTypes = ['head', 'body', 'arm', 'leg', 'wing', 'tail', 'weapon'];
+            const families = ['bird', 'beast', 'dragon', 'water', 'bug', 'plant', 'zombie', 'demon', 'material'];
+            const quantity = Math.floor(Math.random() * 4);
+            const partType = partTypes[Math.floor(Math.random() * partTypes.length)];
+            const family = families[Math.floor(Math.random() * families.length)];
+            const reward = 2.0 + (quantity * 0.1);
+            
+            const description = quantity === 0 ? 
+                `Need any parts from ${family} family monsters` :
+                `Need ${quantity}x ${partType} parts from ${family} family monsters`;
+            
+            return {
+                description: description,
+                reward: reward,
+                checkFunction: (monster) => {
+                    if (!monster.creation_data) return false;
+                    const data = JSON.parse(monster.creation_data);
+                    if (!data.placedParts) return false;
+                    
+                    if (quantity === 0) {
+                        return data.placedParts.some(part => {
+                            return part.family && part.family.toLowerCase() === family.toLowerCase();
+                        });
+                    } else {
+                        return data.placedParts.filter(part => {
+                            return part.family && part.family.toLowerCase() === family.toLowerCase() && part.name.toLowerCase().includes(partType.toLowerCase());
+                        }).length >= quantity;
+                    }
+                }
+            };
+        }
+
+        function loadRequests() {
+            const stored = localStorage.getItem('currentRequests');
+            if (stored) {
+                const requests = JSON.parse(stored);
+                if (requests.length !== 4) {
+                    const newRequests = [
+                        generateRandomRequest(),
+                        generateRandomRequest(),
+                        generateRandomRequest(),
+                        generateWeeklyRequest()
+                    ];
+                    localStorage.setItem('currentRequests', JSON.stringify(newRequests.map(r => ({description: r.description, reward: r.reward}))));
+                    return newRequests;
+                }
+                return requests.map(req => ({
+                    ...req,
+                    checkFunction: generateCheckFunction(req.description, req.reward)
+                }));
+            }
+            const newRequests = [
+                generateRandomRequest(),
+                generateRandomRequest(),
+                generateRandomRequest(),
+                generateWeeklyRequest()
+            ];
+            localStorage.setItem('currentRequests', JSON.stringify(newRequests.map(r => ({description: r.description, reward: r.reward}))));
+            return newRequests;
+        }
+
+        function generateCheckFunction(description, reward) {
+            // Handle "Need any parts from X family monsters"
+            const anyPartsMatch = description.match(/Need any parts from (\w+) family monsters/);
+            if (anyPartsMatch) {
+                const family = anyPartsMatch[1];
+                return (monster) => {
+                    if (!monster.creation_data) return false;
+                    const data = JSON.parse(monster.creation_data);
+                    if (!data.placedParts) return false;
+                    return data.placedParts.some(part => {
+                        return part.family && part.family.toLowerCase() === family.toLowerCase();
+                    });
+                };
+            }
+            
+            const match = description.match(/Need (\d+)x (\w+) parts from (\w+) family monsters|Need (\d+)x (\w+) parts from any monster/);
+            if (match) {
+                if (match[3]) {
+                    const quantity = parseInt(match[1]);
+                    const partType = match[2];
+                    const family = match[3];
+                    return (monster) => {
+                        if (!monster.creation_data) return false;
+                        const data = JSON.parse(monster.creation_data);
+                        if (!data.placedParts) return false;
+                        return data.placedParts.filter(part => {
+                            return part.family && part.family.toLowerCase() === family.toLowerCase() && part.name.toLowerCase().includes(partType.toLowerCase());
+                        }).length >= quantity;
+                    };
+                } else {
+                    const quantity = parseInt(match[4]);
+                    const partType = match[5];
+                    return (monster) => {
+                        if (!monster.creation_data) return false;
+                        const data = JSON.parse(monster.creation_data);
+                        if (!data.placedParts) return false;
+                        return data.placedParts.filter(part => 
+                            part.name.toLowerCase().includes(partType.toLowerCase())
+                        ).length >= quantity;
+                    };
+                }
+            }
+            return () => false;
+        }
+
+        let currentRequests = loadRequests();
+        let requestTimers = JSON.parse(localStorage.getItem('requestTimers')) || {};
+        let rerollCosts = JSON.parse(localStorage.getItem('rerollCosts')) || { daily_0: 0, daily_1: 0, daily_2: 0, weekly: 0 };
+        let fulfilledRequests = JSON.parse(localStorage.getItem('fulfilledRequests')) || {};
+        
+        function initializeTimers() {
+            const now = Date.now();
+            
+            for (let i = 0; i < 3; i++) {
+                if (!requestTimers[`daily_${i}`]) {
+                    requestTimers[`daily_${i}`] = now + (i === 0 ? 60 * 1000 : 59 * 60 * 1000 + 59 * 1000);
+                }
+            }
+            
+            if (!requestTimers['weekly']) {
+                requestTimers['weekly'] = now + (24 * 60 * 60 * 1000);
+            }
+            
+            localStorage.setItem('requestTimers', JSON.stringify(requestTimers));
+        }
+
+        function refreshRequest(requestIndex) {
+            const costKey = requestIndex < 3 ? `daily_${requestIndex}` : 'weekly';
+            const cost = rerollCosts[costKey];
+            
+            if (cost > 0 && gold < cost) {
+                showToast(`Need ${cost}G to reroll!`);
+                return;
+            }
+            
+            if (cost > 0) {
+                gold -= cost;
+                updateGold();
+            }
+            
+            rerollCosts[costKey] = cost === 0 ? 5 : cost * 2;
+            localStorage.setItem('rerollCosts', JSON.stringify(rerollCosts));
+            
+            let newRequest;
+            if (requestIndex < 3) {
+                newRequest = generateRandomRequest();
+                requestTimers[`daily_${requestIndex}`] = Date.now() + (requestIndex === 0 ? 60 * 1000 : 59 * 60 * 1000 + 59 * 1000);
+            } else {
+                newRequest = generateWeeklyRequest();
+                requestTimers['weekly'] = Date.now() + (24 * 60 * 60 * 1000);
+            }
+            currentRequests[requestIndex] = newRequest;
+            localStorage.setItem('currentRequests', JSON.stringify(currentRequests.map(r => ({description: r.description, reward: r.reward}))));
+            localStorage.setItem('requestTimers', JSON.stringify(requestTimers));
+            currentRequests = loadRequests();
+            updateRequests();
+        }
+
+        async function updateRequests() {
+            const response = await fetch('/api/creations');
+            const creations = await response.json();
+            const userName = localStorage.getItem('userName') || 'Anonymous';
+            const userMonsters = creations.filter(creation => creation.author === userName);
+            
+            let requestsHtml = '';
+            
+            for (let i = 0; i < currentRequests.length; i++) {
+                const request = currentRequests[i];
+                const costKey = i < 3 ? `daily_${i}` : 'weekly';
+                const isFulfilled = fulfilledRequests[costKey];
+                const canMake = !isFulfilled && canMakeRequestMonster(request);
+                const rerollCost = rerollCosts[costKey];
+                const rerollText = rerollCost === 0 ? '🎲' : `${rerollCost}G`;
+                
+                let requestHtml = `<div class="rpgui-container framed-grey" style="margin: 10px 0; padding: 15px 60px 15px 15px; position: relative; ${isFulfilled ? 'opacity: 0.7;' : ''}">
+                    ${isFulfilled ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; color: #4CAF50; z-index: 10;">✓</div>' : ''}
+                    ${!isFulfilled ? `<div class="rpgui-container framed" onclick="refreshRequest(${i})" style="cursor: url('/RPGUI/img/cursor/point.png'), pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; position: absolute; top: 10px; right: 10px; border-image-width: 12px; font-size: ${rerollCost === 0 ? 'x-large' : '8px'};"><p>${rerollText}</p></div>` : ''}
+                    ${isFulfilled ? '<div style="position: absolute; top: 10px; right: 10px; font-size: 10px; color: white; text-align: center; width: 80px;">Time until new request:</div>' : ''}
+                    <div id="timer-${i}" style="position: absolute; top: 65px; right: 25px; width: 30px; text-align: center; font-size: 10px;"></div>
+                    <p><strong>${i < 3 ? 'Daily' : 'Weekly'} Request #${i < 3 ? i + 1 : 1}:</strong> ${request.description}</p>
+                    <p><strong>Reward:</strong> ${request.reward.toFixed(1)}x Base Value</p>
+                    ${isFulfilled ? '<p style="color: #4CAF50; font-size: 12px; margin-top: 5px;">This request has been fulfilled!</p>' : ''}
+                    ${canMake ? '<p style="color: #f4d03f; font-size: 12px; margin-top: 5px;">✓ You have the parts to make this!</p>' : ''}
+`;
+                
+                let hasEligible = false;
+                
+                if (!isFulfilled) {
+                    for (const monster of userMonsters) {
+                        if (request.checkFunction(monster)) {
+                            hasEligible = true;
+                            const baseValue = calculateMonsterValue(monster);
+                            const sellValue = Math.floor(baseValue * request.reward);
+                            requestHtml += `<div style="display: inline-block; margin: 10px; text-align: center;">
+                                <img src="${await getMonsterImage(monster)}" style="width: 64px; height: 64px; image-rendering: pixelated;">
+                                <p>${monster.name}</p>
+                                <button class="rpgui-button" onclick="sellMonster('${monster.id}', ${sellValue})"><p>SELL ${sellValue}G</p></button>
+                            </div>`;
+                        }
+                    }
+                }
+                
+                if (!hasEligible && !isFulfilled) {
+                    requestHtml += '<p style="color: red; margin-top: 5px;">No eligible monsters</p>';
+                }
+                
+                requestHtml += '</div>';
+                requestsHtml += requestHtml;
+            }
+            
+            document.getElementById('requests-section').innerHTML = requestsHtml;
+            updateTimers();
+        }
+        
+        function updateTimers() {
+            const now = Date.now();
+            
+            for (let i = 0; i < 4; i++) {
+                const timerKey = i < 3 ? `daily_${i}` : 'weekly';
+                const endTime = requestTimers[timerKey];
+                const timerElement = document.getElementById(`timer-${i}`);
+                
+                if (!timerElement || !endTime) continue;
+                
+                const timeLeft = Math.max(0, endTime - now);
+                
+                if (timeLeft === 0) {
+                    const costKey = i < 3 ? `daily_${i}` : 'weekly';
+                    delete fulfilledRequests[costKey];
+                    rerollCosts[costKey] = 0;
+                    localStorage.setItem('fulfilledRequests', JSON.stringify(fulfilledRequests));
+                    localStorage.setItem('rerollCosts', JSON.stringify(rerollCosts));
+                    
+                    let newRequest;
+                    if (i < 3) {
+                        newRequest = generateRandomRequest();
+                        requestTimers[`daily_${i}`] = now + (i === 0 ? 60 * 1000 : 59 * 60 * 1000 + 59 * 1000);
+                    } else {
+                        newRequest = generateWeeklyRequest();
+                        requestTimers['weekly'] = now + (24 * 60 * 60 * 1000);
+                    }
+                    
+                    currentRequests[i] = newRequest;
+                    localStorage.setItem('currentRequests', JSON.stringify(currentRequests.map(r => ({description: r.description, reward: r.reward}))));
+                    localStorage.setItem('requestTimers', JSON.stringify(requestTimers));
+                    currentRequests = loadRequests();
+                    updateRequests();
+                    continue;
+                }
+                
+                const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                
+                const totalTime = i < 3 ? (i === 0 ? 60 * 1000 : 59 * 60 * 1000 + 59 * 1000) : (24 * 60 * 60 * 1000);
+                const progress = Math.max(0, Math.min(100, ((totalTime - timeLeft) / totalTime) * 100));
+                
+                timerElement.innerHTML = `
+                    <div style="font-size: 8px; color: white;">${i < 3 ? `${minutes}m ${seconds}s` : `${hours}h ${minutes}m`}</div>
+                    <div style="width: 30px; height: 4px; background: #333; border: 1px solid #666; margin: 2px auto;">
+                        <div style="width: ${progress}%; height: 100%; background: #4CAF50;"></div>
+                    </div>
+                `;
+            }
+        }
+        
+        function calculateMonsterValue(monster) {
+            let baseValue = 0;
+            if (monster.creation_data) {
+                const data = JSON.parse(monster.creation_data);
+                if (data.placedParts) {
+                    // Calculate base value
+                    data.placedParts.forEach(part => {
+                        const partData = parts.find(p => p.name === part.name && p.monster === part.monster);
+                        if (partData) {
+                            const rarityValues = { 'common': 1, 'uncommon': 1.5, 'rare': 2, 'epic': 2.5, 'legendary': 3, 'mythic': 4 };
+                            const rarityValue = rarityValues[partData.rarity] || 1;
+                            const partValue = Math.floor(rarityValue * 10);
+                            if (!isNaN(partValue)) {
+                                baseValue += partValue;
+                            }
+                        }
+                    });
+                    
+                    // Calculate same-monster bonuses
+                    const monsterCounts = {};
+                    data.placedParts.forEach(part => {
+                        const key = `${part.name}-${part.monster}`;
+                        if (!monsterCounts[part.monster]) monsterCounts[part.monster] = new Set();
+                        monsterCounts[part.monster].add(key);
+                    });
+                    
+                    let bonusMultiplier = 0;
+                    Object.values(monsterCounts).forEach(uniqueParts => {
+                        const count = uniqueParts.size;
+                        if (count >= 2) {
+                            bonusMultiplier += 0.1 + (count - 2) * 0.2;
+                        }
+                    });
+                    
+                    baseValue = Math.floor(baseValue * (1 + bonusMultiplier));
+                }
+            }
+            return baseValue || 0;
+        }
+        
+        async function getMonsterImage(monster) {
+            if (monster.creation_data) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                await renderCreationData(monster.creation_data, ctx, 64, 64);
+                return canvas.toDataURL();
+            } else {
+                const img = new Image();
+                return new Promise(resolve => {
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 64;
+                        canvas.height = 64;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = false;
+                        
+                        // Scale image to fit in 64x64 while maintaining aspect ratio
+                        let scale = Math.min(64 / img.width, 64 / img.height);
+                        
+                        // If image is very small, scale it up more
+                        if (img.width < 32 || img.height < 32) {
+                            scale = Math.min(64 / img.width, 64 / img.height);
+                        }
+                        
+                        const scaledWidth = img.width * scale;
+                        const scaledHeight = img.height * scale;
+                        
+                        // Center the scaled image
+                        const offsetX = (64 - scaledWidth) / 2;
+                        const offsetY = (64 - scaledHeight) / 2;
+                        
+                        ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+                        resolve(canvas.toDataURL());
+                    };
+                    img.src = monster.sprite;
+                });
+            }
+        }
+        
+        async function sellMonster(monsterId, sellValue) {
+            if (confirm(`Sell this monster for ${sellValue}G?`)) {
+                try {
+                    const response = await fetch(`/api/creations/${monsterId}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        gold += sellValue;
+                        updateGold();
+                        
+                        // Mark request as fulfilled
+                        const requestIndex = findRequestIndexForSale();
+                        if (requestIndex !== -1) {
+                            const requestKey = requestIndex < 3 ? `daily_${requestIndex}` : 'weekly';
+                            fulfilledRequests[requestKey] = true;
+                            localStorage.setItem('fulfilledRequests', JSON.stringify(fulfilledRequests));
+                        }
+                        
+                        updateRequests();
+                        loadCreatedMonsters();
+                        alert(`Monster sold for ${sellValue}G!`);
+                    }
+                } catch (error) {
+                    console.error('Error selling monster:', error);
+                }
+            }
+        }
+        
+        function findRequestIndexForSale() {
+            for (let i = 0; i < currentRequests.length; i++) {
+                const requestKey = i < 3 ? `daily_${i}` : 'weekly';
+                if (!fulfilledRequests[requestKey]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function closeMonsterPreview() {
+            document.getElementById('monster-preview-modal').style.display = 'none';
+            currentPreviewMonster = null;
+        }
+        
+        function showPartPool(partType) {
+            const poolParts = parts.filter(part => part.type === partType);
+            document.getElementById('pool-title').textContent = `${partType.toUpperCase()} PARTS POOL`;
+            document.getElementById('pool-description').textContent = `${poolParts.length} available ${partType} parts`;
+            
+            const poolDiv = document.getElementById('pool-parts');
+            poolDiv.innerHTML = poolParts.map(part => {
+                const rarityInfo = getRarity(part.rarity);
+                return `<div class="${rarityInfo.class}" style="padding: 10px; text-align: center; border: 2px solid #ddd;">
+                    <img src="${part.sprite}" style="width: 48px; height: 48px; image-rendering: pixelated;" alt="${part.name}">
+                    <div style="font-size: 10px; margin-top: 5px; font-weight: bold;">${part.name}</div>
+                    <div style="font-size: 8px; color: #666;">${part.monster}</div>
+                    <div style="font-size: 8px; color: #666;">${rarityInfo.name}</div>
+                </div>`;
+            }).join('');
+            
+            document.getElementById('part-pool-modal').style.display = 'flex';
+        }
+        
+        function closePartPool() {
+            document.getElementById('part-pool-modal').style.display = 'none';
+        }
+        
+        async function sellMonsterFromPreview() {
+            if (!currentPreviewMonster) return;
+            
+            const baseValue = parseInt(document.getElementById('preview-monster-value').textContent);
+            if (confirm(`Sell ${currentPreviewMonster.name} for ${baseValue}G?`)) {
+                try {
+                    const response = await fetch(`/api/creations/${currentPreviewMonster.id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        gold += baseValue;
+                        updateGold();
+                        loadCreatedMonsters();
+                        closeMonsterPreview();
+                        showToast(`Sold ${currentPreviewMonster.name} for ${baseValue}G!`);
+                    }
+                } catch (error) {
+                    console.error('Error selling monster:', error);
+                }
+            }
+        }
+        
+        function addGold() {
+            gold += 100;
+            updateGold();
+            showToast('Added 100 gold!');
+        }
+        // Add hover detection for left 20% and bottom 50%, and right 10% of screen
+        document.addEventListener('mousemove', (e) => {
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            const leftThreshold = screenWidth * 0.2; // 20% from left
+            const bottomThreshold = screenHeight * 0.5; // 50% from top (bottom 50%)
+            const rightThreshold = screenWidth * 0.9; // 90% from left = 10% from right
+            const container = document.querySelector('.container');
+            const body = document.body;
+            
+            if (e.clientX <= leftThreshold && e.clientY >= bottomThreshold) {
+                body.classList.add('show-left-buttons');
+            } else {
+                body.classList.remove('show-left-buttons');
+            }
+            
+            if (e.clientX >= rightThreshold || container.classList.contains('open') || container.classList.contains('monsters-open') || container.classList.contains('requests-open')) {
+                container.classList.add('show-buttons');
+                body.classList.add('show-buttons');
+            } else {
+                container.classList.remove('show-buttons');
+                body.classList.remove('show-buttons');
+            }
+        });
+        
+        // Initialize
+        loadParts().then(() => {
+            // Initialize Phaser
+            initPhaser();
+            
+            // Check for active combining state
+            function checkCombiningState() {
+                const state = localStorage.getItem('combiningState');
+                if (state) {
+                    const data = JSON.parse(state);
+                    const elapsed = Date.now() - data.startTime;
+                    if (elapsed < 30000) {
+                        document.getElementById('combining-modal').style.display = 'block';
+                        document.getElementById('combining-modal').classList.add('active');
+                        
+                        const remaining = 30000 - elapsed;
+                        const progress = (elapsed / 30000) * 100;
+                        document.getElementById('progress-bar').style.width = progress + '%';
+                        document.getElementById('timer-text').textContent = Math.ceil(remaining / 1000) + 's';
+                    } else {
+                        localStorage.removeItem('combiningState');
+                    }
+                }
+            }
+            checkCombiningState();
+            setInterval(checkCombiningState, 1000);
+            
+            initializeTimers();
+            // Update gold display without resetting value
+            document.getElementById('goldAmount').textContent = gold;
+            updateInventory();
+            loadCreatedMonsters();
+            updateRequests();
+            
+            // Update timers every second for daily requests, every minute for weekly
+            setInterval(updateTimers, 1000);
+        });
+        
+        // Close sliding windows when clicking outside
+        document.addEventListener('click', (e) => {
+            const container = document.querySelector('.container');
+            const isToggleButton = e.target.closest('.inventory-toggle, .monsters-toggle, .requests-toggle');
+            const isInsidePanel = e.target.closest('.inventory-area, .monsters-area, .requests-area');
+            
+            if (!isToggleButton && !isInsidePanel && (container.classList.contains('open') || container.classList.contains('monsters-open') || container.classList.contains('requests-open'))) {
+                container.classList.remove('open', 'monsters-open', 'requests-open');
+            }
+        });
+    </script>
+</body>
+</html>

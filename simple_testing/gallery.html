@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creative Mode Gallery</title>
+    <link rel="stylesheet" href="../RPGUI/rpgui.css">
+    <script src="../RPGUI/rpgui.js"></script>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: white;
+            font-family: 'Press Start 2P', Arial, sans-serif;
+            padding: 20px;
+        }
+        .gallery-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .gallery-item {
+            background: #2a2a2a;
+            border: 2px solid #444;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .gallery-item:hover {
+            transform: scale(1.05);
+            border-color: #28a745;
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            margin-bottom: 10px;
+        }
+        .gallery-item h3 {
+            margin: 10px 0 5px 0;
+            font-size: 16px;
+            text-decoration: none;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .gallery-item p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #aaa;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .vote-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #444;
+        }
+        .vote-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.2s;
+        }
+        .vote-btn img {
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+        }
+        .vote-btn:hover {
+            transform: scale(1.2);
+        }
+        .vote-btn.disabled { opacity: 0.3; pointer-events: none; }
+        .vote-count {
+            font-size: 14px;
+            color: white;
+            font-weight: bold;
+            align-self: center;
+        }
+        .back-button {
+            margin-bottom: 20px;
+        }
+        .rarity-common { background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-left: 4px solid #6c757d; }
+        .rarity-uncommon { background: linear-gradient(135deg, #d4edda, #c3e6cb); border-left: 4px solid #28a745; }
+        .rarity-rare { background: linear-gradient(135deg, #d1ecf1, #bee5eb); border-left: 4px solid #17a2b8; }
+        .rarity-epic { background: linear-gradient(135deg, #e2e3f1, #d1d2e8); border-left: 4px solid #6f42c1; }
+        .rarity-legendary { background: linear-gradient(135deg, #fff3cd, #ffeaa7); border-left: 4px solid #ffc107; }
+        .rarity-mythic { background: linear-gradient(135deg, #f8d7da, #f1b0b7); border-left: 4px solid #dc3545; }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        .modal-content {
+            position: relative;
+            margin: 5% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+        }
+        #phaser-modal-container {
+            width: 320px;
+            height: 320px;
+            margin: 20px auto;
+            border: 4px solid #2f4f2f;
+            background: #e6f3e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content" style="overflow:scroll">
+        <div class="gallery-container">
+            <div class="back-button">
+                <button class="rpgui-button" onclick="history.back()"><p>← Back</p></button>
+            </div>
+            <h1>Creative Mode Gallery</h1>
+            <div id="gallery-grid" class="gallery-grid"></div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="monster-modal" class="modal">
+        <div class="modal-content rpgui-container framed" style="max-height:80%; overflow: scroll;">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2 id="modal-title" style="color: white; text-align: center;"></h2>
+            <p id="modal-author" style="color: #aaa; text-align: center; margin: 10px 0;"></p>
+            <div id="phaser-modal-container"></div>
+            <div id="modal-parts" style="color: white; margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">
+                <h3 style="margin-top: 0;">Parts Used:</h3>
+                <div id="parts-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.js"></script>
+    <script src="/utils/ImageLoader.js"></script>
+    <script src="/utils/PartSprite.js"></script>
+    <script src="autoCrop.js"></script>
+    <script>
+        let currentCreation = null;
+        
+        function getRarityClass(rarity) {
+            if (rarity === 'mythic') return 'rarity-mythic';
+            if (rarity === 'legendary') return 'rarity-legendary';
+            if (rarity === 'epic') return 'rarity-epic';
+            if (rarity === 'rare') return 'rarity-rare';
+            if (rarity === 'uncommon') return 'rarity-uncommon';
+            return 'rarity-common';
+        }
+        
+        function getFamilyIcon(family) {
+            if (!family) return '/assets/icons/family-icons-v2/unknown_icon_1.png';
+            const familyName = family.toLowerCase();
+            return `/assets/icons/family-icons-v2/${familyName}_icon_1.png`;
+        }
+        
+        async function loadGallery() {
+            try {
+                const response = await fetch('/api/creations');
+                const creations = await response.json();
+                
+                // Filter for creative mode and advanced creative mode
+                const filtered = creations.filter(c => 
+                    c.source === 'creative-mode' || c.source === 'advanced-creative-mode'
+                );
+                
+                const grid = document.getElementById('gallery-grid');
+                
+                if (filtered.length === 0) {
+                    grid.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No creations yet. Start creating!</p>';
+                    return;
+                }
+                
+                grid.innerHTML = filtered.map((creation, index) => {
+                    const userVote = localStorage.getItem(`vote_${creation.id}`);
+                    const upvoteClass = userVote === 'upvote' ? 'can-rescind' : (userVote === 'downvote' ? 'disabled' : '');
+                    const downvoteClass = userVote === 'downvote' ? 'can-rescind' : (userVote === 'upvote' ? 'disabled' : '');
+                    const upvoteImg = userVote === 'upvote' ? '/assets/icons/misc/other/upvote_done_1.png' : '/assets/icons/misc/other/upvote_1.png';
+                    const downvoteImg = userVote === 'downvote' ? '/assets/icons/misc/other/downvote_done_1.png' : '/assets/icons/misc/other/downvote_1.png';
+                    return `
+                    <div class="gallery-item">
+                        <div onclick="openModal(${index})" style="cursor: pointer;">
+                            <img src="${creation.sprite}" alt="${creation.name}">
+                            <h3>${creation.name.replace(/_/g, ' ')}</h3>
+                            <p>by ${(creation.author || 'Anonymous').replace(/_/g, ' ')}</p>
+                            <p style="font-size: 10px; color: #666;">${creation.source === 'creative-mode' ? 'Creative Mode' : 'Advanced Creative Mode'}</p>
+                        </div>
+                        <div class="vote-container" onclick="event.stopPropagation();">
+                            <button class="vote-btn upvote-btn ${upvoteClass}" onclick="vote(${creation.id}, 'upvote', this)"><img src="${upvoteImg}"></button>
+                            <span class="vote-count">${(creation.upvotes || 0) - (creation.downvotes || 0)}</span>
+                            <button class="vote-btn downvote-btn ${downvoteClass}" onclick="vote(${creation.id}, 'downvote', this)"><img src="${downvoteImg}"></button>
+                        </div>
+                    </div>
+                `}).join('');
+                
+                window.galleryCreations = filtered;
+            } catch (error) {
+                console.error('Error loading gallery:', error);
+            }
+        }
+        
+        async function openModal(index) {
+            const creation = window.galleryCreations[index];
+            currentCreation = creation;
+            document.getElementById('modal-title').textContent = creation.name.replace(/_/g, ' ');
+            document.getElementById('modal-author').textContent = `by ${(creation.author || 'Anonymous').replace(/_/g, ' ')}`;
+            document.getElementById('monster-modal').style.display = 'block';
+            
+            // Display parts list
+            const data = JSON.parse(creation.creation_data);
+            const parts = data.selectedParts || data.placedParts || [];
+            const partsList = document.getElementById('parts-list');
+            
+            if (parts.length > 0) {
+                const uniqueParts = {};
+                parts.forEach(part => {
+                    const key = `${part.monster}-${part.name}`;
+                    if (!uniqueParts[key]) {
+                        uniqueParts[key] = { ...part, count: 0 };
+                    }
+                    uniqueParts[key].count++;
+                });
+                
+                partsList.innerHTML = Object.values(uniqueParts)
+                    .map(p => {
+                        const rarityClass = getRarityClass(p.rarity);
+                        const familyIcon = getFamilyIcon(p.family);
+                        const partId = `part-${p.monster}-${p.name}`.replace(/\s/g, '-');
+                        
+                        // Auto-crop part image
+                        setTimeout(() => {
+                            const img = document.getElementById(partId);
+                            if (img && img.src) {
+                                autoCropImage(img.src).then(cropped => {
+                                    img.src = cropped;
+                                });
+                            }
+                        }, 0);
+                        
+                        return `<div class="inventory-item ${rarityClass}" style="display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 8px;">
+                            <img id="${partId}" src="${p.sprite || p.dataUrl}" style="width: 32px; height: 32px; image-rendering: pixelated;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #333;">${p.name}</div>
+                                <div style="font-size: 12px; color: #666;">from ${p.monster}</div>
+                            </div>
+                            ${p.count > 1 ? `<div style="font-weight: bold; color: #333; margin-right: 10px;">x${p.count}</div>` : ''}
+                            <img src="${familyIcon}" style="width: 24px; height: 24px; image-rendering: pixelated;" onerror="this.style.display='none'">
+                        </div>`;
+                    })
+                    .join('');
+            } else {
+                partsList.innerHTML = '<div style="color: #666;">No parts information available</div>';
+            }
+            
+            // Simply display the static PNG on a canvas
+            const container = document.getElementById('phaser-modal-container');
+            container.innerHTML = '<canvas id="preview-canvas" width="320" height="320" style="border: 4px solid #2f4f2f; background: #e6f3e6; image-rendering: pixelated; width: 100%; height: 100%;"></canvas>';
+            
+            const canvas = document.getElementById('preview-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.webkitImageSmoothingEnabled = false;
+            ctx.mozImageSmoothingEnabled = false;
+            ctx.msImageSmoothingEnabled = false;
+            
+            const img = new Image();
+            img.onload = () => {
+                // Center the image on canvas
+                const scale = Math.min(320 / img.width, 320 / img.height);
+                const scaledWidth = img.width * scale;
+                const scaledHeight = img.height * scale;
+                const offsetX = (320 - scaledWidth) / 2;
+                const offsetY = (320 - scaledHeight) / 2;
+                
+                ctx.clearRect(0, 0, 320, 320);
+                ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+            };
+            img.src = creation.sprite;
+        }
+        
+        function remixCreation() {
+            if (!currentCreation) return;
+            
+            // Store creation data in localStorage for the creative mode page to load
+            localStorage.setItem('remixData', currentCreation.creation_data);
+            
+            // Redirect to appropriate creative mode page
+            const targetPage = currentCreation.source === 'advanced-creative-mode' ? 'advanced_creative_mode.html' : 'creative_mode.html';
+            window.location.href = targetPage;
+        }
+        
+        function closeModal() {
+            document.getElementById('monster-modal').style.display = 'none';
+        }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('monster-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+        
+        async function vote(creationId, type, button) {
+            const voteKey = `vote_${creationId}`;
+            const existingVote = localStorage.getItem(voteKey);
+            
+            if (existingVote === type) {
+                // Rescind vote
+                try {
+                    const response = await fetch(`/api/creations/${creationId}/vote`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type, rescind: true })
+                    });
+                    
+                    if (response.ok) {
+                        localStorage.removeItem(voteKey);
+                        const voteContainer = button.parentElement;
+                        const countSpan = voteContainer.querySelector('.vote-count');
+                        const currentCount = parseInt(countSpan.textContent);
+                        countSpan.textContent = type === 'upvote' ? currentCount - 1 : currentCount + 1;
+                        button.classList.remove('can-rescind');
+                        button.querySelector('img').src = type === 'upvote' ? '/assets/icons/misc/other/upvote_1.png' : '/assets/icons/misc/other/downvote_1.png';
+                        voteContainer.querySelector(type === 'upvote' ? '.downvote-btn' : '.upvote-btn').classList.remove('disabled');
+                    }
+                } catch (error) {
+                    console.error('Error rescinding vote:', error);
+                }
+            } else if (!existingVote) {
+                // Cast new vote
+                try {
+                    const response = await fetch(`/api/creations/${creationId}/vote`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type })
+                    });
+                    
+                    if (response.ok) {
+                        localStorage.setItem(voteKey, type);
+                        const voteContainer = button.parentElement;
+                        const countSpan = voteContainer.querySelector('.vote-count');
+                        const currentCount = parseInt(countSpan.textContent);
+                        countSpan.textContent = type === 'upvote' ? currentCount + 1 : currentCount - 1;
+                        button.classList.add('can-rescind');
+                        button.querySelector('img').src = type === 'upvote' ? '/assets/icons/misc/other/upvote_done_1.png' : '/assets/icons/misc/other/downvote_done_1.png';
+                        voteContainer.querySelector(type === 'upvote' ? '.downvote-btn' : '.upvote-btn').classList.add('disabled');
+                    }
+                } catch (error) {
+                    console.error('Error voting:', error);
+                }
+            }
+        }
+        
+        loadGallery();
+    </script>
+</body>
+</html>

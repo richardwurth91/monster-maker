@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Joint Mapper</title>
+    <link rel="stylesheet" href="/RPGUI/rpgui.css">
+    <script src="/RPGUI/rpgui.js"></script>
+    <style>
+        body { background: #2a4d3a; }
+        .rpgui-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .main-layout { display: flex; gap: 20px; }
+        .canvas-area { flex: 1; }
+        .parts-list { width: 300px; max-height: 600px; overflow-y: auto; }
+        .part-item { 
+            padding: 10px; 
+            margin: 5px 0; 
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            border: 2px solid #306230;
+            background: #9bbc0f;
+            color: #0f380f;
+        }
+        .part-item:hover { background: #b5d633; }
+        .part-item.completed { background: #7fb069; border-left: 4px solid #306230; }
+        .part-item.current { background: #ffd700; border-left: 4px solid #ff8c00; }
+        #canvas { 
+            border: 2px solid #0f380f; 
+            background: white; 
+            cursor: crosshair;
+        }
+        .joint-point {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+        }
+        .joint-wing { background: #ff6b6b; }
+        .joint-hand { background: #4ecdc4; }
+        .joint-arm { background: #45b7d1; }
+        .joint-leg { background: #96ceb4; }
+        .joint-foot { background: #feca57; }
+        .joint-neck { background: #ff9ff3; }
+        .joint-tail { background: #a55eea; }
+        .joint-type-btn {
+            margin: 5px;
+            padding: 10px 15px;
+            border: 2px solid #306230;
+            cursor: url('/RPGUI/img/cursor/point.png'), pointer;
+            color: white;
+            font-weight: bold;
+        }
+        .joint-type-btn.active { border-color: #0f380f; }
+        .canvas-container { position: relative; display: inline-block; }
+        .controls { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="rpgui-content">
+        <div class="rpgui-container framed">
+            <h1>Joint Point Mapper - Admin Tool</h1>
+            <p>Map joint points for all parts. Progress: <span id="progress">0/0</span></p>
+            
+            <div class="main-layout">
+                <div class="parts-list rpgui-container framed-grey">
+                    <h3>All Parts</h3>
+                    <div id="parts-container"></div>
+                </div>
+                
+                <div class="canvas-area">
+                    <div class="controls">
+                        <div style="margin-bottom: 10px;">
+                            <button class="joint-type-btn joint-wing active" onclick="setJointType('wing')">Wing</button>
+                            <button class="joint-type-btn joint-hand" onclick="setJointType('hand')">Hand</button>
+                            <button class="joint-type-btn joint-arm" onclick="setJointType('arm')">Arm</button>
+                            <button class="joint-type-btn joint-leg" onclick="setJointType('leg')">Leg</button>
+                            <button class="joint-type-btn joint-foot" onclick="setJointType('foot')">Foot</button>
+                            <button class="joint-type-btn joint-neck" onclick="setJointType('neck')">Neck</button>
+                            <button class="joint-type-btn joint-tail" onclick="setJointType('tail')">Tail</button>
+                        </div>
+                        <button class="rpgui-button" onclick="saveJoints()" id="save-btn" disabled><p>SAVE JOINTS</p></button>
+                        <button class="rpgui-button" onclick="clearJoints()"><p>CLEAR</p></button>
+                        <button class="rpgui-button" onclick="deleteJoints()"><p>DELETE</p></button>
+                        <button class="rpgui-button" onclick="nextPart()"><p>NEXT PART</p></button>
+                        <span id="current-part">Select a part to begin</span>
+                    </div>
+                    
+                    <div class="canvas-container">
+                        <canvas id="canvas" width="400" height="400"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let parts = [];
+        let currentPart = null;
+        let currentPartIndex = 0;
+        let joints = [];
+        let completedParts = new Set();
+        let currentJointType = 'wing';
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        async function loadParts() {
+            const response = await fetch('/api/monsters');
+            const monsters = await response.json();
+            
+            parts = [];
+            for (const monster of monsters) {
+                if (monster.parts) {
+                    const monsterParts = JSON.parse(monster.parts);
+                    Object.keys(monsterParts).forEach(partName => {
+                        parts.push({
+                            name: partName,
+                            monster: monster.name,
+                            sprite: monsterParts[partName],
+                            id: `${monster.name}_${partName}`
+                        });
+                    });
+                }
+            }
+            
+            await checkCompletedParts();
+            displayParts();
+            updateProgress();
+        }
+
+        async function checkCompletedParts() {
+            // Skip checking - load joints only when part is selected
+        }
+
+        function displayParts() {
+            const container = document.getElementById('parts-container');
+            container.innerHTML = parts.map((part, index) => {
+                let className = 'part-item';
+                if (completedParts.has(part.id)) className += ' completed';
+                if (index === currentPartIndex) className += ' current';
+                return `<div class="${className}" onclick="selectPartByIndex(${index})">${part.name} (${part.monster})</div>`;
+            }).join('');
+        }
+
+        function updateProgress() {
+            document.getElementById('progress').textContent = `${completedParts.size}/${parts.length}`;
+        }
+
+        function selectPartByIndex(index) {
+            currentPartIndex = index;
+            selectPart(parts[index].id);
+        }
+
+        function nextPart() {
+            if (currentPartIndex < parts.length - 1) {
+                currentPartIndex++;
+                selectPart(parts[currentPartIndex].id);
+            }
+        }
+
+        async function selectPart(partId) {
+            const part = parts.find(p => p.id === partId);
+            if (!part) return;
+            
+            currentPart = part;
+            document.getElementById('current-part').textContent = `${part.name} (${part.monster})`;
+            document.getElementById('save-btn').disabled = true;
+            
+            displayParts();
+            
+            // Load existing joints
+            await loadExistingJoints(partId);
+            
+            // Draw part on canvas
+            const img = new Image();
+            img.onload = () => {
+                // Autocrop the image
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = img.width;
+                tempCanvas.height = img.height;
+                tempCtx.drawImage(img, 0, 0);
+                
+                const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
+                const data = imageData.data;
+                
+                let minX = img.width, minY = img.height, maxX = 0, maxY = 0;
+                
+                for (let y = 0; y < img.height; y++) {
+                    for (let x = 0; x < img.width; x++) {
+                        const alpha = data[(y * img.width + x) * 4 + 3];
+                        if (alpha > 0) {
+                            minX = Math.min(minX, x);
+                            minY = Math.min(minY, y);
+                            maxX = Math.max(maxX, x);
+                            maxY = Math.max(maxY, y);
+                        }
+                    }
+                }
+                
+                const cropWidth = maxX - minX + 1;
+                const cropHeight = maxY - minY + 1;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const x = (canvas.width - cropWidth * 5) / 2;
+                const y = (canvas.height - cropHeight * 5) / 2;
+                console.log(`Part placed at top-left: (${x}, ${y})`);
+                ctx.drawImage(img, minX, minY, cropWidth, cropHeight, x, y, cropWidth * 5, cropHeight * 5);
+                currentPart.image = { width: cropWidth, height: cropHeight, cropX: minX, cropY: minY };
+                drawJoints();
+            };
+            img.src = part.sprite;
+        }
+
+
+
+        async function loadExistingJoints(partId) {
+            try {
+                const response = await fetch(`/api/joints/${partId}`);
+                if (response.ok) {
+                    joints = await response.json();
+                } else {
+                    joints = [];
+                }
+            } catch {
+                joints = [];
+            }
+        }
+
+        function setJointType(type) {
+            currentJointType = type;
+            document.querySelectorAll('.joint-type-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.joint-${type}`).classList.add('active');
+        }
+
+        function drawJoints() {
+            document.querySelectorAll('.joint-point').forEach(el => el.remove());
+            
+            joints.forEach((joint, index) => {
+                const point = document.createElement('div');
+                point.className = `joint-point joint-${joint.type}`;
+                
+                // Convert relative coordinates back to canvas coordinates for display
+                const partX = (canvas.width - (currentPart?.image?.width * 5 || 0)) / 2;
+                const partY = (canvas.height - (currentPart?.image?.height * 5 || 0)) / 2;
+                const canvasX = partX + (joint.x - (currentPart?.image?.cropX || 0)) * 5;
+                const canvasY = partY + (joint.y - (currentPart?.image?.cropY || 0)) * 5;
+                
+                point.style.left = canvasX + 'px';
+                point.style.top = canvasY + 'px';
+                point.onclick = () => removeJoint(index);
+                document.querySelector('.canvas-container').appendChild(point);
+            });
+        }
+
+        canvas.onclick = (e) => {
+            if (!currentPart) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            
+            // Convert click coordinates to be relative to part top-left
+            const partX = (canvas.width - (currentPart.image?.width * 5 || 0)) / 2;
+            const partY = (canvas.height - (currentPart.image?.height * 5 || 0)) / 2;
+            const relativeX = (clickX - partX) / 5 + (currentPart.image?.cropX || 0);
+            const relativeY = (clickY - partY) / 5 + (currentPart.image?.cropY || 0);
+            
+            console.log(`Joint added at canvas: (${clickX}, ${clickY}), relative to part: (${relativeX}, ${relativeY})`);
+            joints.push({ x: relativeX, y: relativeY, type: currentJointType });
+            drawJoints();
+            document.getElementById('save-btn').disabled = false;
+        };
+
+        function removeJoint(index) {
+            joints.splice(index, 1);
+            drawJoints();
+        }
+
+        async function deleteJoints() {
+            if (!currentPart) return;
+            
+            if (confirm(`Delete all joint data for ${currentPart.name}?`)) {
+                try {
+                    await fetch(`/api/joints/${currentPart.id}`, { method: 'DELETE' });
+                    joints = [];
+                    drawJoints();
+                    completedParts.delete(currentPart.id);
+                    displayParts();
+                    updateProgress();
+                    alert('Joint data deleted!');
+                } catch (error) {
+                    alert('Error deleting joint data');
+                }
+            }
+        }
+
+        async function saveJoints() {
+            if (!currentPart) return;
+            
+            try {
+                await fetch('/api/joints', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        partId: currentPart.id,
+                        joints: joints
+                    })
+                });
+                completedParts.add(currentPart.id);
+                displayParts();
+                updateProgress();
+                document.getElementById('save-btn').disabled = true;
+                alert('Joints saved!');
+            } catch (error) {
+                alert('Error saving joints');
+            }
+        }
+
+        async function deleteJoints() {
+            if (!currentPart) return;
+            
+            if (confirm(`Delete all joint data for ${currentPart.name}?`)) {
+                try {
+                    await fetch(`/api/joints/${currentPart.id}`, { method: 'DELETE' });
+                    joints = [];
+                    drawJoints();
+                    completedParts.delete(currentPart.id);
+                    displayParts();
+                    updateProgress();
+                    alert('Joint data deleted!');
+                } catch (error) {
+                    alert('Error deleting joint data');
+                }
+            }
+        }
+
+        function clearJoints() {
+            joints = [];
+            drawJoints();
+        }
+
+        loadParts();
+    </script>
+</body>
+</html>
