@@ -14,7 +14,7 @@ let unlockedSlots = 20;
 let partInventory = [];
 let placedParts = [];
 let selectedSprites = [];
-let colorPaletteUnlocked = localStorage.getItem('colorPaletteUnlocked') === 'true';
+let colorPaletteUnlocked = true;
 
 // Phaser Configuration
 const config = {
@@ -22,7 +22,7 @@ const config = {
     width: '100%',
     height: '100%',
     parent: 'phaser-workspace',
-    backgroundColor: '#e6f3e6',
+    backgroundColor: '#ffffff',
     pixelArt: true,
     scale: {
         mode: Phaser.Scale.EXPAND,
@@ -62,8 +62,6 @@ async function create() {
     
     // Click empty space to deselect
     scene.input.on('pointerdown', (pointer, currentlyOver) => {
-        console.log('Canvas click at:', pointer.x, pointer.y);
-        console.log('Objects under pointer:', currentlyOver.length, currentlyOver);
         if (currentlyOver.length === 0) {
             deselectAll();
         }
@@ -94,9 +92,6 @@ async function create() {
     scene.events.on('selectionChanged', () => {
         updateSelectedPartsHighlight();
     });
-    
-    // Load workspace state
-    await loadWorkspaceState();
 }
 
 function update() {
@@ -104,33 +99,15 @@ function update() {
 }
 
 function drawGrid() {
-    console.log('Drawing grid...');
     if (scene.gridGraphics) {
-        console.log('Destroying existing grid');
         scene.gridGraphics.destroy();
     }
-    
-    const canvasWidth = scene.scale.width;
-    const canvasHeight = scene.scale.height;
-    
-    scene.gridGraphics = scene.add.graphics();
-    scene.gridGraphics.lineStyle(1, 0xe0e0e0, 1);
-    scene.gridGraphics.setDepth(-10000);
-    scene.gridGraphics.setScrollFactor(0);
-    console.log('Grid depth set to:', scene.gridGraphics.depth);
-    
-    for (let i = 0; i <= canvasWidth; i += 10) {
-        scene.gridGraphics.lineBetween(i, 0, i, canvasHeight);
-    }
-    for (let i = 0; i <= canvasHeight; i += 10) {
-        scene.gridGraphics.lineBetween(0, i, canvasWidth, i);
-    }
-    console.log('Grid drawn with', Math.ceil(canvasWidth/10 + canvasHeight/10 + 2), 'lines');
 }
 
 function deselectAll() {
     selectedSprites.forEach(sprite => sprite.setSelected(false));
     selectedSprites = [];
+    scene.selectedSprites = selectedSprites;
     scene.events.emit('selectionChanged');
 }
 
@@ -197,7 +174,7 @@ function setupKeyboardShortcuts() {
             return;
         }
         
-        // Delete selected parts
+        // Delete Parts on Canvas
         if (e.key === 'Backspace') {
             e.preventDefault();
             removeSelectedPart();
@@ -214,16 +191,16 @@ function setupKeyboardShortcuts() {
         selectedSprites.forEach(sprite => {
             switch (e.key) {
                 case 'ArrowUp':
-                    sprite.y = Math.max(0, sprite.y - 5);
+                    sprite.y -= 5;
                     break;
                 case 'ArrowDown':
-                    sprite.y = Math.min(scene.scale.height - sprite.displayHeight, sprite.y + 5);
+                    sprite.y += 5;
                     break;
                 case 'ArrowLeft':
-                    sprite.x = Math.max(0, sprite.x - 5);
+                    sprite.x -= 5;
                     break;
                 case 'ArrowRight':
-                    sprite.x = Math.min(scene.scale.width - sprite.displayWidth, sprite.x + 5);
+                    sprite.x += 5;
                     break;
             }
             sprite.updateSelectionBorder();
@@ -257,21 +234,25 @@ async function loadPartInventory() {
 // Update part inventory display
 async function updatePartInventoryDisplay() {
     const inventoryDiv = document.getElementById('part-inventory');
-    if (!inventoryDiv) return;
+    const mobileInventoryDiv = document.getElementById('mobile-part-inventory');
     
     if (partInventory.length === 0) {
-        inventoryDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No parts available.</div>';
+        const emptyHtml = '<div style="text-align: center; color: #666; padding: 20px;">No parts available.</div>';
+        if (inventoryDiv) inventoryDiv.innerHTML = emptyHtml;
+        if (mobileInventoryDiv) mobileInventoryDiv.innerHTML = emptyHtml;
         return;
     }
     
-    // Store current expanded state
+    // Store current expanded state for desktop
     const expandedMonsters = new Set();
-    inventoryDiv.querySelectorAll('[id^="inv-monster-"]').forEach(monster => {
-        if (monster.style.display === 'block') {
-            const name = monster.id.replace('inv-monster-', '');
-            expandedMonsters.add(name);
-        }
-    });
+    if (inventoryDiv) {
+        inventoryDiv.querySelectorAll('[id^="inv-monster-desktop-"]').forEach(monster => {
+            if (monster.style.display === 'block') {
+                const name = monster.id.replace('inv-monster-desktop-', '');
+                expandedMonsters.add(name);
+            }
+        });
+    }
     
     // Group parts by monster
     const partsByMonster = {};
@@ -281,78 +262,61 @@ async function updatePartInventoryDisplay() {
         partsByMonster[monster].push({...part, index});
     });
     
-    let inventoryHtml = '';
-    
-    for (const [monster, parts] of Object.entries(partsByMonster).sort()) {
-        const isExpanded = expandedMonsters.has(monster);
-        const monsterSprite = parts[0]?.monsterSprite || '';
-        const escapedMonster = monster.replace(/'/g, "\\'");
-        inventoryHtml += `
-            <div style="margin-bottom: 10px;">
-                <div onclick="toggleInventoryMonster('${escapedMonster}')" style="cursor: pointer; padding: 8px; background: #4a5c4a; color: white; font-weight: bold; border: 1px solid #666; display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span id="inv-arrow-${escapedMonster}">${isExpanded ? '▼' : '▶'}</span> ${monster} (${parts.length})
+    function generateInventoryHTML(prefix) {
+        let html = '';
+        for (const [monster, parts] of Object.entries(partsByMonster).sort()) {
+            const isExpanded = expandedMonsters.has(monster);
+            const monsterSprite = parts[0]?.monsterSprite || '';
+            const safeId = monster.replace(/[^a-zA-Z0-9]/g, '_');
+            const arrowChar = isExpanded ? '▼' : '▶';
+            const displayStyle = isExpanded ? 'block' : 'none';
+            html += `
+                <div style="margin-bottom: 10px;">
+                    <div onclick="toggleInventoryMonster('${prefix}${safeId}')" style="cursor: pointer; padding: 8px; background: #4a5c4a; color: white; font-weight: bold; border: 1px solid #666; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="inv-arrow-${prefix}${safeId}">${arrowChar}</span> ${monster} (${parts.length})
+                        </div>
+                        <img src="${monsterSprite}" style="width: 32px; height: 32px; image-rendering: pixelated;">
                     </div>
-                    <img id="monster-img-${escapedMonster}" style="width: 32px; height: 32px; image-rendering: pixelated; display: none;">
-                </div>
-                <div id="inv-monster-${escapedMonster}" style="display: ${isExpanded ? 'block' : 'none'};">
-        `;
-        
-        // Auto-crop monster image after rendering
-        if (monsterSprite) {
-            setTimeout(() => {
-                autoCropImage(monsterSprite).then(cropped => {
-                    const img = document.getElementById(`monster-img-${escapedMonster}`);
-                    if (img) {
-                        img.src = cropped;
-                        img.style.display = 'block';
-                    }
-                });
-            }, 0);
-        }
-        
-        for (const part of parts) {
-            const rarityInfo = getRarity(part.rarity);
-            const familyIcon = getFamilyIcon(part.family);
+                    <div id="inv-monster-${prefix}${safeId}" style="display: ${displayStyle};">
+            `;
             
-            inventoryHtml += `<div class="inventory-item ${rarityInfo.class}" onclick="selectInventoryPart(${part.index})" style="display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 8px; cursor: pointer;">
-                <img id="part-img-${part.index}" style="width: 32px; height: 32px; image-rendering: pixelated; display: none;">
-                <div style="flex: 1;">
-                    <div style="font-weight: 600;">${part.name}</div>
-                    <div style="font-size: 12px;">${part.type || 'part'}</div>
-                    <div style="font-size: 12px; font-weight: 600;">${rarityInfo.name}</div>
-                </div>
-                <img src="${familyIcon}" style="width: 24px; height: 24px; image-rendering: pixelated;" onerror="this.style.display='none'">
-            </div>`;
+            for (const part of parts) {
+                const rarityInfo = getRarity(part.rarity);
+                const familyIcon = getFamilyIcon(part.family);
+                
+                html += `<div class="inventory-item ${rarityInfo.class}" onclick="selectInventoryPart(${part.index})" style="display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 8px; cursor: pointer;">
+                    <img src="${part.sprite}" style="width: 32px; height: 32px; image-rendering: pixelated;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600;">${part.name}</div>
+                        <div style="font-size: 12px;">${part.type || 'part'}</div>
+                        <div style="font-size: 12px; font-weight: 600;">${rarityInfo.name}</div>
+                    </div>
+                    <img src="${familyIcon}" style="width: 24px; height: 24px; image-rendering: pixelated;" onerror="this.style.display='none'">
+                </div>`;
+            }
             
-            // Auto-crop part image
-            setTimeout(() => {
-                autoCropImage(part.sprite).then(cropped => {
-                    const img = document.getElementById(`part-img-${part.index}`);
-                    if (img) {
-                        img.src = cropped;
-                        img.style.display = 'block';
-                    }
-                });
-            }, 0);
+            html += '</div></div>';
         }
-        
-        inventoryHtml += '</div></div>';
+        return html;
     }
     
-    inventoryDiv.innerHTML = inventoryHtml;
+    if (inventoryDiv) inventoryDiv.innerHTML = generateInventoryHTML('desktop-');
+    if (mobileInventoryDiv) mobileInventoryDiv.innerHTML = generateInventoryHTML('mobile-');
 }
 
-function toggleInventoryMonster(monster) {
-    const monsterDiv = document.getElementById(`inv-monster-${monster}`);
-    const arrow = document.getElementById(`inv-arrow-${monster}`);
+window.toggleInventoryMonster = function(id) {
+    const monsterDiv = document.getElementById(`inv-monster-${id}`);
+    const arrow = document.getElementById(`inv-arrow-${id}`);
     
-    if (monsterDiv.style.display === 'none') {
-        monsterDiv.style.display = 'block';
-        arrow.textContent = '▼';
-    } else {
-        monsterDiv.style.display = 'none';
-        arrow.textContent = '▶';
+    if (monsterDiv && arrow) {
+        if (monsterDiv.style.display === 'none' || monsterDiv.style.display === '') {
+            monsterDiv.style.display = 'block';
+            arrow.textContent = '▼';
+        } else {
+            monsterDiv.style.display = 'none';
+            arrow.textContent = '▶';
+        }
     }
 }
 
@@ -381,7 +345,6 @@ function selectInventoryPart(index) {
 }
 
 async function addPartToWorkspace(part, inventoryIndex) {
-    console.log('Adding part to workspace:', part.name);
     const textureKey = `part_${Date.now()}_${Math.random()}`;
     await imageLoader.loadBase64Texture(textureKey, part.sprite);
     
@@ -396,7 +359,6 @@ async function addPartToWorkspace(part, inventoryIndex) {
     
     const depth = placedParts.length + 1;
     sprite.setDepth(depth);
-    console.log('Part sprite depth set to:', depth);
     placedParts.unshift(sprite);
     
     // Redraw grid to fix rendering issues
@@ -408,26 +370,22 @@ async function addPartToWorkspace(part, inventoryIndex) {
     selectedSprites = [sprite];
     scene.events.emit('selectionChanged');
     
-    // Check canvas state after adding part
-    console.log('Canvas state after adding part:');
-    console.log('Grid graphics exists:', !!scene.gridGraphics);
-    console.log('Grid graphics depth:', scene.gridGraphics?.depth);
-    console.log('Grid graphics visible:', scene.gridGraphics?.visible);
-    console.log('Total display objects:', scene.children.list.length);
-    console.log('Display objects by depth:', scene.children.list.map(obj => ({type: obj.constructor.name, depth: obj.depth})).sort((a,b) => a.depth - b.depth));
-    
     updateSaveButton();
 }
 
-// Update selected parts display
+// Update Parts on Canvas display
 async function updateSelectedPartsDisplay() {
     const slotsDiv = document.getElementById('selected-parts');
-    if (!slotsDiv) return;
+    const mobileSlotsDiv = document.getElementById('mobile-selected-parts');
     
     const filledCount = selectedPartsSlots.filter(part => part !== null).length;
     const headerElement = document.querySelector('.rpgui-container h3');
-    if (headerElement && headerElement.textContent.includes('Selected Parts')) {
-        headerElement.textContent = `Selected Parts (${filledCount}/20)`;
+    if (headerElement && headerElement.textContent.includes('Parts on Canvas')) {
+        headerElement.textContent = `Parts on Canvas (${filledCount}/20)`;
+    }
+    const mobileHeaderElement = document.querySelector('.mobile-selected-panel h3');
+    if (mobileHeaderElement) {
+        mobileHeaderElement.textContent = `Parts on Canvas (${filledCount}/20)`;
     }
     
     const slotElements = [];
@@ -438,20 +396,22 @@ async function updateSelectedPartsDisplay() {
         if (part) {
             const rarityInfo = getRarity(part.rarity);
             slotElements.push(`
-                <div class="inventory-item ${rarityInfo.class}" onclick="selectPartSlot(${index}, event)" style="display: flex; align-items: center; justify-content: center; padding: 5px; margin-bottom: 8px; cursor: pointer; height: 20px;">
+                <div class="inventory-item ${rarityInfo.class}" onclick="selectPartSlot(${index}, event)" style="display: flex; align-items: center; justify-content: center; padding: 5px; margin-bottom: 8px; cursor: pointer;">
                     <img src="${part.sprite}" style="width: 32px; height: 32px; image-rendering: pixelated;">
                 </div>
             `);
         } else {
             slotElements.push(`
-                <div class="inventory-item" style="display: flex; align-items: center; justify-content: center; padding: 5px; border: 2px solid #666; margin-bottom: 8px; cursor: pointer; background: #333; height: 20px;">
+                <div class="inventory-item" style="display: flex; align-items: center; justify-content: center; padding: 5px; border: 2px solid #666; margin-bottom: 8px; cursor: pointer; background: #333;">
                     <div style="width: 32px; height: 32px; border: 1px dashed #666; display: flex; align-items: center; justify-content: center; font-size: 20px;">+</div>
                 </div>
             `);
         }
     }
     
-    slotsDiv.innerHTML = slotElements.join('');
+    const html = slotElements.join('');
+    if (slotsDiv) slotsDiv.innerHTML = html;
+    if (mobileSlotsDiv) mobileSlotsDiv.innerHTML = html;
 }
 
 function selectPartSlot(slotIndex, event) {
@@ -463,7 +423,9 @@ function selectPartSlot(slotIndex, event) {
     );
     if (!sprite) return;
     
-    if (event && event.shiftKey) {
+    // On mobile, always act like shift-click for multiselect
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile || (event && event.shiftKey)) {
         if (selectedSprites.includes(sprite)) {
             sprite.setSelected(false);
             selectedSprites = selectedSprites.filter(s => s !== sprite);
@@ -477,27 +439,34 @@ function selectPartSlot(slotIndex, event) {
         selectedSprites = [sprite];
     }
     
+    // Sync with scene
+    scene.selectedSprites = selectedSprites;
+    
     scene.events.emit('selectionChanged');
 }
 
 function updateSelectedPartsHighlight() {
     const selectedPartsDiv = document.getElementById('selected-parts');
-    if (!selectedPartsDiv) return;
+    const mobileSelectedPartsDiv = document.getElementById('mobile-selected-parts');
     
-    const inventoryItems = selectedPartsDiv.querySelectorAll('.inventory-item');
-    inventoryItems.forEach((item, index) => {
-        const slotPart = selectedPartsSlots[index];
-        if (!slotPart) return;
+    [selectedPartsDiv, mobileSelectedPartsDiv].forEach(container => {
+        if (!container) return;
         
-        const isSelected = selectedSprites.some(sprite => 
-            sprite.partData.name === slotPart.name && sprite.partData.monster === slotPart.monster
-        );
-        
-        if (isSelected) {
-            item.style.setProperty('background', '#ffffcc', 'important');
-        } else {
-            item.style.setProperty('background', '', 'important');
-        }
+        const inventoryItems = container.querySelectorAll('.inventory-item');
+        inventoryItems.forEach((item, index) => {
+            const slotPart = selectedPartsSlots[index];
+            if (!slotPart) return;
+            
+            const isSelected = selectedSprites.some(sprite => 
+                sprite.partData.name === slotPart.name && sprite.partData.monster === slotPart.monster
+            );
+            
+            if (isSelected) {
+                item.style.setProperty('background', '#ffffcc', 'important');
+            } else {
+                item.style.setProperty('background', '', 'important');
+            }
+        });
     });
 }
 
@@ -779,9 +748,10 @@ function updateMonsterValue() {
 
 function updateSaveButton() {
     const saveBtn = document.getElementById('save-btn');
-    if (saveBtn) {
-        saveBtn.disabled = placedParts.length === 0;
-    }
+    const saveBtnMobile = document.getElementById('save-btn-mobile');
+    const hasContent = placedParts.length > 0;
+    if (saveBtn) saveBtn.disabled = !hasContent;
+    if (saveBtnMobile) saveBtnMobile.disabled = !hasContent;
 }
 
 function showToast(message) {
@@ -816,68 +786,31 @@ function saveWorkspaceState() {
 }
 
 async function loadRemixData(data) {
-    console.log('=== loadRemixData called ===');
-    console.log('Scene ready:', !!scene);
-    console.log('ImageLoader ready:', !!imageLoader);
-    
     const placedPartsData = data.placedParts || [];
-    
-    console.log('=== REMIX DEBUG: Original Position Data ===');
-    placedPartsData.forEach((part, i) => {
-        console.log(`Part ${i} (${part.name}):`, {
-            x: part.x,
-            y: part.y,
-            scale: part.scale || part.scaleX,
-            width: part.width,
-            height: part.height
-        });
-    });
-    
-    console.log('=== REMIX DEBUG: Loading Parts ===');
-    
     for (const partData of placedPartsData) {
         try {
-            console.log(`Processing part: ${partData.name}`);
             const textureKey = `part_${Date.now()}_${Math.random()}`;
             const spriteUrl = partData.dataUrl || partData.sprite;
             
-            console.log(`Sprite URL:`, spriteUrl);
-            
-            if (!spriteUrl) {
-                console.log('No sprite URL, skipping');
-                continue;
-            }
+            if (!spriteUrl) continue;
         
         let base64Data;
         if (spriteUrl.startsWith('http')) {
-            console.log('Fetching URL...');
             const response = await fetch(spriteUrl);
             const blob = await response.blob();
-            console.log('Converting to base64...');
             base64Data = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result);
                 reader.readAsDataURL(blob);
             });
-            console.log('Base64 conversion complete');
         } else {
             base64Data = spriteUrl;
         }
         
-        console.log('Loading texture...');
         await imageLoader.loadBase64Texture(textureKey, base64Data);
-        console.log('Texture loaded');
         
         const scaledX = partData.x;
         const scaledY = partData.y;
-        
-        console.log(`Creating sprite at:`, {
-            originalX: partData.x,
-            originalY: partData.y,
-            scaledX: scaledX,
-            scaledY: scaledY,
-            canvasSize: { width: scene.scale.width, height: scene.scale.height }
-        });
         
         const sprite = new PartSprite(scene, scaledX, scaledY, textureKey, {
             name: partData.name,
@@ -889,11 +822,9 @@ async function loadRemixData(data) {
         sprite.setFlip(partData.flipX || partData.flipHorizontal || false, partData.flipY || partData.flipVertical || false);
         sprite.setDepth(placedParts.length + 1);
         
-        console.log(`Sprite created:`, { x: sprite.x, y: sprite.y, depth: sprite.depth });
-        
         placedParts.push(sprite);
         
-        // Add to selected parts slots
+        // Add to Parts on Canvas slots
         const slotIndex = placedParts.length - 1;
         if (slotIndex < 20) {
             selectedPartsSlots[slotIndex] = {
@@ -917,11 +848,9 @@ async function loadRemixData(data) {
 async function loadWorkspaceState() {
     // Check for remix data first
     const remixData = localStorage.getItem('remixData');
-    console.log('Checking for remix data:', remixData ? 'FOUND' : 'NOT FOUND');
     if (remixData) {
         localStorage.removeItem('remixData');
         const data = JSON.parse(remixData);
-        console.log('Parsed remix data:', data);
         await loadRemixData(data);
         return;
     }
@@ -966,7 +895,7 @@ async function loadWorkspaceState() {
                 placedParts.push(sprite);
             }
             
-            // Update selected parts display after restoring parts
+            // Update Parts on Canvas display after restoring parts
             await updateSelectedPartsDisplay();
             await updatePartInventoryDisplay();
             updateMonsterValue();
@@ -1008,6 +937,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadPartInventory();
     await updateSelectedPartsDisplay();
     updateMonsterValue();
+    
+    // Load workspace state after inventory is loaded
+    await loadWorkspaceState();
 });
 
 // Save workspace state when page unloads

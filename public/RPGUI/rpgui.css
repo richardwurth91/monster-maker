@@ -666,7 +666,7 @@ ul.rpgui-list-imp {
   font-weight: 1;
   text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
   font-size: 1.15em;
-  text-decoration: underline;
+  text-decoration: none;
   /* center text */
   text-align: center;
   /* padding */
@@ -680,7 +680,7 @@ ul.rpgui-list-imp {
   font-weight: 1;
   text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
   font-size: 1.0em;
-  text-decoration: underline;
+  text-decoration: none;
   /* center text */
   text-align: center;
   /* padding */
@@ -714,7 +714,7 @@ ul.rpgui-list-imp {
 
 /* default gui link */
 .rpgui-content a:hover {
-  text-decoration: underline; }
+  text-decoration: none; }
 
 /* default gui label */
 .rpgui-content label {

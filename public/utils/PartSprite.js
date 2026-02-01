@@ -39,8 +39,8 @@ class PartSprite extends Phaser.GameObjects.Sprite {
             myStartY = this.y;
             dragStartPositions = [];
             
-            // Only move multiple sprites if this sprite is currently selected
-            if (this.selected && this.scene.selectedSprites && this.scene.selectedSprites.includes(this) && this.scene.selectedSprites.length > 1) {
+            // Store positions of all selected sprites for multi-drag
+            if (this.scene.selectedSprites && this.scene.selectedSprites.length > 1 && this.scene.selectedSprites.includes(this)) {
                 dragStartPositions = this.scene.selectedSprites.map(sprite => ({
                     sprite: sprite,
                     startX: sprite.x,
@@ -72,6 +72,11 @@ class PartSprite extends Phaser.GameObjects.Sprite {
         });
         
         this.on('pointerdown', (pointer) => {
+            // If already selected and part of multi-selection, don't deselect on canvas tap
+            if (this.selected && this.scene.selectedSprites && this.scene.selectedSprites.length > 1) {
+                return;
+            }
+            
             // Don't change selection on drag start if already selected
             if (this.selected && !pointer.event.shiftKey) {
                 return;

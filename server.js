@@ -7,10 +7,14 @@ const app = express();
 const PORT = 3232;
 
 app.use(express.json({ limit: '10mb' }));
+app.get('/', (req, res) => {
+  res.redirect('/advanced_creative_mode.html');
+});
 app.use(express.static('public'));
 app.use('/assets', express.static('assets'));
 app.use('/testing', express.static('testing'));
 app.use('/simple_testing', express.static('simple_testing'));
+
 
 // Database setup
 const db = new sqlite3.Database('monsters.db');

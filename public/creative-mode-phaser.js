@@ -14,7 +14,7 @@ let unlockedSlots = 20;
 let partInventory = [];
 let placedParts = [];
 let selectedSprites = [];
-let colorPaletteUnlocked = localStorage.getItem('colorPaletteUnlocked') === 'true';
+let colorPaletteUnlocked = true;
 
 // Phaser Configuration
 const config = {
@@ -214,16 +214,16 @@ function setupKeyboardShortcuts() {
         selectedSprites.forEach(sprite => {
             switch (e.key) {
                 case 'ArrowUp':
-                    sprite.y = Math.max(0, sprite.y - 5);
+                    sprite.y -= 5;
                     break;
                 case 'ArrowDown':
-                    sprite.y = Math.min(scene.scale.height - sprite.displayHeight, sprite.y + 5);
+                    sprite.y += 5;
                     break;
                 case 'ArrowLeft':
-                    sprite.x = Math.max(0, sprite.x - 5);
+                    sprite.x -= 5;
                     break;
                 case 'ArrowRight':
-                    sprite.x = Math.min(scene.scale.width - sprite.displayWidth, sprite.x + 5);
+                    sprite.x += 5;
                     break;
             }
             sprite.updateSelectionBorder();

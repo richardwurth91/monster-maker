@@ -7,6 +7,88 @@
     <link rel="stylesheet" href="../RPGUI/rpgui.css">
     <script src="../RPGUI/rpgui.js"></script>
     <style>
+        /* Override RPGUI scrollbars with standard ones */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #888 #333;
+        }
+        *::-webkit-scrollbar {
+            width: 12px;
+        }
+        *::-webkit-scrollbar-track {
+            background: #333;
+        }
+        *::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 6px;
+        }
+        *::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; font-size: 10px; }
+            h1 { font-size: 16px; margin: 10px 0; }
+            h2 { font-size: 14px; }
+            h3 { font-size: 12px; }
+            .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+            .gallery-item { padding: 10px; }
+            .gallery-item img { height: 150px; }
+            .gallery-item h3 { font-size: 12px; }
+            .gallery-item p { font-size: 10px; }
+            .vote-btn img { width: 24px; height: 24px; }
+            .vote-count { font-size: 12px; }
+            .modal-content { width: 95% !important; margin: 10% auto; padding: 0; max-height: 90%; }
+            .rpgui-container.framed { background: #2a2a2a !important; border: 2px solid #666 !important; border-radius: 8px !important; border-image: none !important; }
+            #phaser-modal-container { width: 280px; height: 280px; }
+            #phaser-modal-container canvas { border: none !important; }
+            #modal-parts { padding: 10px; }
+            .inventory-item { padding: 8px !important; }
+            .inventory-item img { width: 24px !important; height: 24px !important; }
+            .rpgui-button p { font-size: 10px; }
+            .back-x { display: block !important; }
+            .back-text { display: none !important; }
+            .rpgui-button { background: #333 !important; border: 2px solid #666 !important; border-radius: 8px !important; border-image: none !important; padding: 8px 12px !important; }
+            .rpgui-button:hover { background: #444 !important; }
+            .back-button {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                margin: 0;
+                width: 64px;
+                height: 64px;
+                min-height: unset;
+                min-width: unset;
+                z-index: 100;
+                background: #333;
+                border: 2px solid #666;
+                border-radius: 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 32px;
+                color: white;
+            }
+            .back-x {
+                display: block !important;
+            }
+        }
+        @media (min-width: 769px) {
+            .back-button {
+                position: static;
+                background: none;
+                border: none;
+                width: auto;
+                height: auto;
+                font-size: inherit;
+            }
+            .back-x {
+                display: none !important;
+            }
+            .back-text {
+                display: block;
+            }
+        }
         body {
             background: #1a1a1a;
             color: white;
@@ -81,7 +163,7 @@
         }
         .vote-btn.disabled { opacity: 0.3; pointer-events: none; }
         .vote-count {
-            font-size: 14px;
+            font-size: 14px !important;
             color: white;
             font-weight: bold;
             align-self: center;
@@ -128,15 +210,37 @@
             border: 4px solid #2f4f2f;
             background: #e6f3e6;
         }
+        .admin-controls {
+            display: none;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #666;
+        }
+        .admin-controls button {
+            font-size: 10px;
+            padding: 5px;
+            margin: 2px;
+            background: #444;
+            border: 1px solid #666;
+            color: white;
+            cursor: pointer;
+        }
+        .admin-controls button:hover {
+            background: #555;
+        }
+        .admin-mode .admin-controls {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="rpgui-content" style="overflow:scroll">
         <div class="gallery-container">
-            <div class="back-button">
-                <button class="rpgui-button" onclick="history.back()"><p>← Back</p></button>
+            <div class="back-button" onclick="history.back()">
+                <button class="rpgui-button back-text"><p>← Back</p></button>
+                <span class="back-x">×</span>
             </div>
-            <h1>Creative Mode Gallery</h1>
+            <h1 style="font-size:18px; padding-top: 16px;">Gallery <button class="rpgui-button" onclick="toggleAdminMode()" style="font-size:10px; padding:5px 10px; margin-left:10px;"><p>Admin</p></button></h1>
             <div id="gallery-grid" class="gallery-grid"></div>
         </div>
     </div>
@@ -161,6 +265,12 @@
     <script src="autoCrop.js"></script>
     <script>
         let currentCreation = null;
+        let adminMode = false;
+        
+        function toggleAdminMode() {
+            adminMode = !adminMode;
+            document.body.classList.toggle('admin-mode', adminMode);
+        }
         
         function getRarityClass(rarity) {
             if (rarity === 'mythic') return 'rarity-mythic';
@@ -212,6 +322,12 @@
                             <button class="vote-btn upvote-btn ${upvoteClass}" onclick="vote(${creation.id}, 'upvote', this)"><img src="${upvoteImg}"></button>
                             <span class="vote-count">${(creation.upvotes || 0) - (creation.downvotes || 0)}</span>
                             <button class="vote-btn downvote-btn ${downvoteClass}" onclick="vote(${creation.id}, 'downvote', this)"><img src="${downvoteImg}"></button>
+                        </div>
+                        <div class="admin-controls">
+                            <button onclick="event.stopPropagation(); removeVotes(${creation.id})">Remove Votes</button>
+                            <button onclick="event.stopPropagation(); renameMonster(${creation.id})">Rename</button>
+                            <button onclick="event.stopPropagation(); renameAuthor(${creation.id})">Rename Author</button>
+                            <button onclick="event.stopPropagation(); deleteMonster(${creation.id})">Delete</button>
                         </div>
                     </div>
                 `}).join('');
@@ -371,6 +487,56 @@
                 } catch (error) {
                     console.error('Error voting:', error);
                 }
+            }
+        }
+        
+        async function removeVotes(id) {
+            if (!confirm('Remove all votes for this creation?')) return;
+            try {
+                const response = await fetch(`/api/creations/${id}/reset-votes`, { method: 'POST' });
+                if (response.ok) loadGallery();
+            } catch (error) {
+                console.error('Error removing votes:', error);
+            }
+        }
+        
+        async function renameMonster(id) {
+            const newName = prompt('Enter new monster name:');
+            if (!newName) return;
+            try {
+                const response = await fetch(`/api/creations/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName })
+                });
+                if (response.ok) loadGallery();
+            } catch (error) {
+                console.error('Error renaming monster:', error);
+            }
+        }
+        
+        async function renameAuthor(id) {
+            const newAuthor = prompt('Enter new author name:');
+            if (!newAuthor) return;
+            try {
+                const response = await fetch(`/api/creations/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ author: newAuthor })
+                });
+                if (response.ok) loadGallery();
+            } catch (error) {
+                console.error('Error renaming author:', error);
+            }
+        }
+        
+        async function deleteMonster(id) {
+            if (!confirm('Delete this creation permanently?')) return;
+            try {
+                const response = await fetch(`/api/creations/${id}`, { method: 'DELETE' });
+                if (response.ok) loadGallery();
+            } catch (error) {
+                console.error('Error deleting monster:', error);
             }
         }
         
